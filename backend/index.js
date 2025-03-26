@@ -90,55 +90,174 @@ app.get('/users', async (req, res) => {
 
 app.get('/events', async (req, res) => {
   try {
-    const events = await Event.findAll();
-    res.status(200).json(events);
+    const { category } = req.query;
+    const where = {};
+    
+    if (category) {
+      where.category = category;
+    }
+
+    const events = await Event.findAll({
+      where,
+      include: [{
+        model: User,
+        as: 'creator',
+        attributes: ['id', 'name']
+      }],
+      order: [['date', 'ASC']]
+    });
+    
+    res.status(200).json({
+      status: 'success',
+      count: events.length,
+      data: events
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'Failed to fetch events'
+    });
   }
+});
+
+app.get('/events/categories', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    data: {
+      categories: ['концерт', 'лекция', 'выставка', 'мастер-класс', 'спорт']
+    }
+  });
 });
 
 app.get('/events/:id', async (req, res) => {
   try {
-    const event = await Event.findByPk(req.params.id);
+    const event = await Event.findByPk(req.params.id, {
+      include: [{
+        model: User,
+        as: 'creator',
+        attributes: ['id', 'name']
+      }]
+    });
     if (!event) {
-      return res.status(404).json({ error: 'Event not found' });
+      return res.status(404).json({ 
+        error: 'Not found',
+        message: 'Event not found'
+      });
     }
-    res.status(200).json(event);
+    res.status(200).json({
+      status: 'success',
+      data: event
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'Failed to fetch event'
+    });
   }
 });
 
 app.post('/events', async (req, res) => {
   try {
-    const { title, description, date, created_by } = req.body;
-    if (!title || !date || !created_by) {
-      return res.status(400).json({ error: 'Title, date and created_by are required' });
+    const { title, description, date, created_by, category } = req.body;
+    
+    if (!title || !date || !created_by || !category) {
+      return res.status(400).json({ 
+        error: 'Validation error',
+        details: {
+          title: !title ? 'Title is required' : null,
+          date: !date ? 'Date is required' : null,
+          created_by: !created_by ? 'Creator ID is required' : null,
+          category: !category ? 'Category is required' : null
+        },
+        allowed_categories: ['концерт', 'лекция', 'выставка', 'мастер-класс', 'спорт']
+      });
     }
-    const event = await Event.create({ title, description, date, created_by });
-    res.status(201).json(event);
+
+    const event = await Event.create({ 
+      title, 
+      description, 
+      date, 
+      created_by, 
+      category 
+    });
+    
+    res.status(201).json({
+      status: 'success',
+      data: event
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    if (error.name === 'SequelizeValidationError') {
+      const errors = error.errors.map(err => ({
+        field: err.path,
+        message: err.message
+      }));
+      return res.status(400).json({ 
+        error: 'Validation error',
+        details: errors
+      });
+    }
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'Failed to create event'
+    });
   }
 });
 
 app.put('/events/:id', async (req, res) => {
   try {
-    const { title, description, date } = req.body;
-    if (!title && !description && !date) {
-      return res.status(400).json({ error: 'At least one field to update is required' });
+    const { title, description, date, category } = req.body;
+    
+    if (!title && !description && !date && !category) {
+      return res.status(400).json({ 
+        error: 'Validation error',
+        message: 'At least one field to update is required'
+      });
     }
-    const [updated] = await Event.update(
-      { title, description, date },
-      { where: { id: req.params.id } }
-    );
+
+    const updateData = {};
+    if (title) updateData.title = title;
+    if (description) updateData.description = description;
+    if (date) updateData.date = date;
+    if (category) updateData.category = category;
+
+    const [updated] = await Event.update(updateData, {
+      where: { id: req.params.id }
+    });
+    
     if (updated === 0) {
-      return res.status(404).json({ error: 'Event not found' });
+      return res.status(404).json({ 
+        error: 'Not found',
+        message: 'Event not found'
+      });
     }
-    const updatedEvent = await Event.findByPk(req.params.id);
-    res.status(200).json(updatedEvent);
+    
+    const updatedEvent = await Event.findByPk(req.params.id, {
+      include: [{
+        model: User,
+        as: 'creator',
+        attributes: ['id', 'name']
+      }]
+    });
+    
+    res.status(200).json({
+      status: 'success',
+      data: updatedEvent
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    if (error.name === 'SequelizeValidationError') {
+      const errors = error.errors.map(err => ({
+        field: err.path,
+        message: err.message
+      }));
+      return res.status(400).json({ 
+        error: 'Validation error',
+        details: errors
+      });
+    }
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'Failed to update event'
+    });
   }
 });
 
@@ -148,11 +267,17 @@ app.delete('/events/:id', async (req, res) => {
       where: { id: req.params.id }
     });
     if (deleted === 0) {
-      return res.status(404).json({ error: 'Event not found' });
+      return res.status(404).json({ 
+        error: 'Not found',
+        message: 'Event not found'
+      });
     }
     res.status(204).end();
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'Failed to delete event'
+    });
   }
 });
 

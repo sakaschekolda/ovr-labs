@@ -13,11 +13,11 @@ const Event = sequelize.define('Event', {
     allowNull: false,
     validate: {
       notEmpty: {
-        msg: 'Title cannot be empty'
+        msg: "Name field can't be empty"
       },
       len: {
         args: [3, 100],
-        msg: 'Title must be between 3 and 100 characters'
+        msg: 'Name must be from 3 to 100 symbols'
       }
     }
   },
@@ -26,7 +26,7 @@ const Event = sequelize.define('Event', {
     validate: {
       len: {
         args: [0, 2000],
-        msg: 'Description too long (max 2000 characters)'
+        msg: 'Description is too large (2000 symbols at most)'
       }
     }
   },
@@ -35,11 +35,25 @@ const Event = sequelize.define('Event', {
     allowNull: false,
     validate: {
       isDate: {
-        msg: 'Invalid date format'
+        msg: 'Wrong data format'
       },
       isAfter: {
         args: new Date().toISOString(),
-        msg: 'Event date must be in the future'
+        msg: 'Event date must be oncoming'
+      }
+    }
+  },
+  category: {
+    type: DataTypes.ENUM('concert', 'lecture', 'exhibition', 'master class', 'sport'),
+    allowNull: false,
+    defaultValue: 'lecture',
+    validate: {
+      notEmpty: {
+        msg: "Category field can't be empty"
+      },
+      isIn: {
+        args: [['concert', 'lecture', 'exhibition', 'master class', 'sport']],
+        msg: 'Forbidden category'
       }
     }
   },
@@ -52,7 +66,7 @@ const Event = sequelize.define('Event', {
     },
     validate: {
       isInt: {
-        msg: 'Creator ID must be an integer'
+        msg: 'Creator ID must be a number'
       }
     }
   }
@@ -61,12 +75,9 @@ const Event = sequelize.define('Event', {
   createdAt: 'created_at',
   updatedAt: false,
   indexes: [
-    {
-      fields: ['date']
-    },
-    {
-      fields: ['created_by']
-    }
+    { fields: ['date'] },
+    { fields: ['created_by'] },
+    { fields: ['category'] }
   ]
 });
 
