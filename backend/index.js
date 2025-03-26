@@ -7,11 +7,14 @@ const User = require('./models/User');
 const Event = require('./models/Event');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const { ApiError, ValidationError, NotFoundError } = require('./errors');
+const errorHandler = require('./errorHandler');
 
 dotenv.config();
 
 const app = express();
 
+// Swagger configuration
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
@@ -52,6 +55,23 @@ const swaggerOptions = {
             created_by: { type: 'integer', example: 1 },
             created_at: { type: 'string', format: 'date-time' }
           }
+        },
+        ErrorResponse: {
+          type: 'object',
+          properties: {
+            status: { type: 'string', example: 'error' },
+            message: { type: 'string', example: 'Error message' },
+            errors: { 
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  field: { type: 'string' },
+                  message: { type: 'string' }
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -61,15 +81,18 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
+// Middleware
 app.use(morgan('[API] :method :url :status - :response-time ms'));
 app.use(cors());
 app.use(express.json());
 
+// Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   explorer: true,
   customSiteTitle: "Events API Documentation"
 }));
 
+// Health check endpoint
 app.get('/', (req, res) => {
   res.json({
     status: 'success',
@@ -98,6 +121,8 @@ app.get('/', (req, res) => {
  *                 type: string
  *               email:
  *                 type: string
+ *               password:
+ *                 type: string
  *     responses:
  *       201:
  *         description: User was created successfully
@@ -107,47 +132,41 @@ app.get('/', (req, res) => {
  *               $ref: '#/components/schemas/User'
  *       400:
  *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       409:
  *         description: Email is already in use
  *       500:
  *         description: Server error
  */
-
-app.post('/users', async (req, res) => {
+app.post('/users', async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
     
-    if (!name || !email) { // Пароль теперь не обязателен
-      return res.status(400).json({ 
-        error: 'Validation error',
-        details: {
-          name: !name ? 'Name is required' : null,
-          email: !email ? 'Email is required' : null
-        }
+    if (!name || !email) {
+      throw new ValidationError({
+        name: !name ? 'Name is required' : null,
+        email: !email ? 'Email is required' : null
       });
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ 
-        error: 'Validation error',
-        details: {
-          email: 'Invalid email format'
-        }
+      throw new ValidationError({
+        email: 'Invalid email format'
       });
     }
 
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      return res.status(409).json({ 
-        error: 'Conflict',
-        message: 'Email already in use'
-      });
+      throw new ApiError(409, 'Email already in use');
     }
 
     const user = await User.create({ 
       name, 
       email,
-      password // Добавляем пароль, если он был передан
+      password: password || null
     });
     
     res.status(201).json({
@@ -160,12 +179,7 @@ app.post('/users', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message,
-      details: error.errors ? error.errors.map(e => e.message) : null
-    });
+    next(error);
   }
 });
 
@@ -194,8 +208,7 @@ app.post('/users', async (req, res) => {
  *       500:
  *         description: Server error
  */
-
-app.get('/users', async (req, res) => {
+app.get('/users', async (req, res, next) => {
   try {
     const users = await User.findAll({
       attributes: ['id', 'name', 'email', 'created_at'],
@@ -207,10 +220,7 @@ app.get('/users', async (req, res) => {
       data: users
     });
   } catch (error) {
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: 'Failed to fetch users'
-    });
+    next(error);
   }
 });
 
@@ -246,8 +256,7 @@ app.get('/users', async (req, res) => {
  *       500:
  *         description: Server error
  */
-
-app.get('/events', async (req, res) => {
+app.get('/events', async (req, res, next) => {
   try {
     const { category } = req.query;
     const where = {};
@@ -272,13 +281,34 @@ app.get('/events', async (req, res) => {
       data: events
     });
   } catch (error) {
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: 'Failed to fetch events'
-    });
+    next(error);
   }
 });
 
+/**
+ * @swagger
+ * /events/categories:
+ *   get:
+ *     summary: Get available event categories
+ *     tags: [Events]
+ *     responses:
+ *       200:
+ *         description: List of categories
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     categories:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ */
 app.get('/events/categories', (req, res) => {
   res.status(200).json({
     status: 'success',
@@ -288,7 +318,31 @@ app.get('/events/categories', (req, res) => {
   });
 });
 
-app.get('/events/:id', async (req, res) => {
+/**
+ * @swagger
+ * /events/{id}:
+ *   get:
+ *     summary: Get event by ID
+ *     tags: [Events]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Event details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Event'
+ *       404:
+ *         description: Event not found
+ *       500:
+ *         description: Server error
+ */
+app.get('/events/:id', async (req, res, next) => {
   try {
     const event = await Event.findByPk(req.params.id, {
       include: [{
@@ -297,21 +351,17 @@ app.get('/events/:id', async (req, res) => {
         attributes: ['id', 'name']
       }]
     });
+    
     if (!event) {
-      return res.status(404).json({ 
-        error: 'Not found',
-        message: 'Event not found'
-      });
+      throw new NotFoundError('Event');
     }
+    
     res.status(200).json({
       status: 'success',
       data: event
     });
   } catch (error) {
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: 'Failed to fetch event'
-    });
+    next(error);
   }
 });
 
@@ -354,25 +404,24 @@ app.get('/events/:id', async (req, res) => {
  *               $ref: '#/components/schemas/Event'
  *       400:
  *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         description: Server error
  */
-
-app.post('/events', async (req, res) => {
+app.post('/events', async (req, res, next) => {
   try {
     const { title, description, date, created_by, category } = req.body;
     
     if (!title || !date || !created_by || !category) {
-      return res.status(400).json({ 
-        error: 'Validation error',
-        details: {
-          title: !title ? 'Title is required' : null,
-          date: !date ? 'Date is required' : null,
-          created_by: !created_by ? 'Creator ID is required' : null,
-          category: !category ? 'Category is required' : null
-        },
-        allowed_categories: ['concert', 'lecture', 'exhibition', 'master class', 'sport']
-      });
+      throw new ValidationError({
+        title: !title ? 'Title is required' : null,
+        date: !date ? 'Date is required' : null,
+        created_by: !created_by ? 'Creator ID is required' : null,
+        category: !category ? 'Category is required' : null
+      }, 'Missing required fields');
     }
 
     const event = await Event.create({ 
@@ -388,32 +437,47 @@ app.post('/events', async (req, res) => {
       data: event
     });
   } catch (error) {
-    if (error.name === 'SequelizeValidationError') {
-      const errors = error.errors.map(err => ({
-        field: err.path,
-        message: err.message
-      }));
-      return res.status(400).json({ 
-        error: 'Validation error',
-        details: errors
-      });
-    }
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: 'Failed to create event'
-    });
+    next(error);
   }
 });
 
-app.put('/events/:id', async (req, res) => {
+/**
+ * @swagger
+ * /events/{id}:
+ *   put:
+ *     summary: Update event
+ *     tags: [Events]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Event'
+ *     responses:
+ *       200:
+ *         description: Updated event
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Event'
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Event not found
+ *       500:
+ *         description: Server error
+ */
+app.put('/events/:id', async (req, res, next) => {
   try {
     const { title, description, date, category } = req.body;
     
     if (!title && !description && !date && !category) {
-      return res.status(400).json({ 
-        error: 'Validation error',
-        message: 'At least one field to update is required'
-      });
+      throw new ValidationError({}, 'At least one field to update is required');
     }
 
     const updateData = {};
@@ -427,10 +491,7 @@ app.put('/events/:id', async (req, res) => {
     });
     
     if (updated === 0) {
-      return res.status(404).json({ 
-        error: 'Not found',
-        message: 'Event not found'
-      });
+      throw new NotFoundError('Event');
     }
     
     const updatedEvent = await Event.findByPk(req.params.id, {
@@ -446,42 +507,51 @@ app.put('/events/:id', async (req, res) => {
       data: updatedEvent
     });
   } catch (error) {
-    if (error.name === 'SequelizeValidationError') {
-      const errors = error.errors.map(err => ({
-        field: err.path,
-        message: err.message
-      }));
-      return res.status(400).json({ 
-        error: 'Validation error',
-        details: errors
-      });
-    }
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: 'Failed to update event'
-    });
+    next(error);
   }
 });
 
-app.delete('/events/:id', async (req, res) => {
+/**
+ * @swagger
+ * /events/{id}:
+ *   delete:
+ *     summary: Delete event
+ *     tags: [Events]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       204:
+ *         description: Event deleted successfully
+ *       404:
+ *         description: Event not found
+ *       500:
+ *         description: Server error
+ */
+app.delete('/events/:id', async (req, res, next) => {
   try {
     const deleted = await Event.destroy({
       where: { id: req.params.id }
     });
+    
     if (deleted === 0) {
-      return res.status(404).json({ 
-        error: 'Not found',
-        message: 'Event not found'
-      });
+      throw new NotFoundError('Event');
     }
+    
     res.status(204).end();
   } catch (error) {
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: 'Failed to delete event'
-    });
+    next(error);
   }
 });
+
+app.use((req, res, next) => {
+  next(new NotFoundError('Endpoint'));
+});
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
@@ -503,7 +573,8 @@ sequelize.authenticate()
         process.exit(1);
       } else {
         console.log(`✅ Server is on port ${PORT}`);
-        console.log(`➡️  Check: http://localhost:${PORT}`);
+        console.log(`➡️  API: http://localhost:${PORT}`);
+        console.log(`📚 Docs: http://localhost:${PORT}/api-docs`);
       }
     });
   })
