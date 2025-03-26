@@ -1,4 +1,5 @@
 const express = require('express');
+const morgan = require('morgan');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const sequelize = require('./db');
@@ -60,6 +61,7 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
+app.use(morgan('[API] :method :url :status - :response-time ms'));
 app.use(cors());
 app.use(express.json());
 
@@ -113,9 +115,9 @@ app.get('/', (req, res) => {
 
 app.post('/users', async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, password } = req.body;
     
-    if (!name || !email) {
+    if (!name || !email) { // Пароль теперь не обязателен
       return res.status(400).json({ 
         error: 'Validation error',
         details: {
@@ -142,7 +144,12 @@ app.post('/users', async (req, res) => {
       });
     }
 
-    const user = await User.create({ name, email });
+    const user = await User.create({ 
+      name, 
+      email,
+      password // Добавляем пароль, если он был передан
+    });
+    
     res.status(201).json({
       status: 'success',
       data: {
@@ -153,9 +160,11 @@ app.post('/users', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error creating user:', error);
     res.status(500).json({ 
       error: 'Internal server error',
-      message: 'Something went wrong'
+      message: error.message,
+      details: error.errors ? error.errors.map(e => e.message) : null
     });
   }
 });
