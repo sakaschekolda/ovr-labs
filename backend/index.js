@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const sequelize = require('./db');
 
 dotenv.config();
 
@@ -19,12 +20,20 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, (error) => {
-  if (error) {
-    console.error('Error occured on server start', error);
+sequelize.authenticate()
+  .then(() => {
+    console.log('✅ Database connection established');
+    app.listen(PORT, (error) => {
+      if (error) {
+        console.error('Error occured on server start', error);
+        process.exit(1);
+      } else {
+        console.log(`✅ Server is on port ${PORT}`);
+        console.log(`➡️  Check: http://localhost:${PORT}`);
+      }
+    });
+  })
+  .catch(err => {
+    console.error('❌ Unable to connect to database:', err);
     process.exit(1);
-  } else {
-    console.log(`✅ Server is on port ${PORT}`);
-    console.log(`➡️  Check: http://localhost:${PORT}`);
-  }
-});
+  });
