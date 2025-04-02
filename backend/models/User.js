@@ -1,5 +1,9 @@
+// backend/models/User.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../db');
+const bcrypt = require('bcrypt');
+
+const SALT_ROUNDS = 10;
 
 const User = sequelize.define('User', {
   id: {
@@ -11,40 +15,22 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(100),
     allowNull: false,
     validate: {
-      notEmpty: {
-        msg: 'Name cannot be empty'
-      },
-      len: {
-        args: [2, 100],
-        msg: 'Name must be between 2 and 100 characters'
-      }
+      notEmpty: { msg: 'Name cannot be empty' },
+      len: { args: [2, 100], msg: 'Name must be between 2 and 100 characters' }
     }
   },
   email: {
     type: DataTypes.STRING(255),
     allowNull: false,
-    unique: {
-      name: 'unique_email',
-      msg: 'Email already in use'
-    },
+    unique: { msg: 'Email address is already in use.' },
     validate: {
-      isEmail: {
-        msg: 'Invalid email format'
-      },
-      notEmpty: {
-        msg: 'Email cannot be empty'
-      }
+      isEmail: { msg: 'Invalid email format.' },
+      notEmpty: { msg: 'Email cannot be empty.' }
     }
   },
   password: {
-    type: DataTypes.STRING(64),
+    type: DataTypes.STRING,
     allowNull: true,
-    validate: {
-      len: {
-        args: [8, 64],
-        msg: 'Password must be between 8 and 64 characters'
-      }
-    }
   }
 }, {
   timestamps: true,
@@ -52,7 +38,38 @@ const User = sequelize.define('User', {
   updatedAt: false,
   defaultScope: {
     attributes: { exclude: ['password'] }
+  },
+  scopes: {
+    withPassword: {
+      attributes: { include: ['password'] }
+    }
+  },
+  hooks: {
+   beforeCreate: async (user) => {
+      if (user.password) {
+        user.password = await bcrypt.hash(user.password, SALT_ROUNDS);
+      }
+    },
+    beforeUpdate: async (user) => {
+      if (user.changed('password') && user.password) {
+         if (user.password.length < 50 || !user.password.startsWith('$2')) {
+            user.password = await bcrypt.hash(user.password, SALT_ROUNDS);
+         }
+      } else if (user.changed('password') && !user.password) {
+          user.password = null;
+      }
+    }
   }
 });
+
+User.prototype.validPassword = async function(passwordToVerify) {
+  if (!this.password) {
+    console.warn(`Attempted password validation for User ${this.id} without hash. Refetching...`);
+    const userWithHash = await User.scope('withPassword').findByPk(this.id);
+    if (!userWithHash || !userWithHash.password) return false;
+    return bcrypt.compare(passwordToVerify, userWithHash.password);
+  }
+  return bcrypt.compare(passwordToVerify, this.password);
+};
 
 module.exports = User;

@@ -12,35 +12,22 @@ const Event = sequelize.define('Event', {
     type: DataTypes.STRING(100),
     allowNull: false,
     validate: {
-      notEmpty: {
-        msg: "Name field can't be empty"
-      },
-      len: {
-        args: [3, 100],
-        msg: 'Name must be from 3 to 100 symbols'
-      }
+      notEmpty: { msg: "Event title cannot be empty." },
+      len: { args: [3, 100], msg: 'Event title must be between 3 and 100 characters.' }
     }
   },
   description: {
     type: DataTypes.TEXT,
+    allowNull: true,
     validate: {
-      len: {
-        args: [0, 2000],
-        msg: 'Description is too large (2000 symbols at most)'
-      }
+      len: { args: [0, 2000], msg: 'Description cannot exceed 2000 characters.' }
     }
   },
   date: {
     type: DataTypes.DATE,
     allowNull: false,
     validate: {
-      isDate: {
-        msg: 'Wrong data format'
-      },
-      isAfter: {
-        args: new Date().toISOString(),
-        msg: 'Event date must be oncoming'
-      }
+      isDate: { msg: 'Invalid date format provided.' },
     }
   },
   category: {
@@ -48,12 +35,10 @@ const Event = sequelize.define('Event', {
     allowNull: false,
     defaultValue: 'lecture',
     validate: {
-      notEmpty: {
-        msg: "Category field can't be empty"
-      },
+      notEmpty: { msg: "Category cannot be empty." },
       isIn: {
         args: [['concert', 'lecture', 'exhibition', 'master class', 'sport']],
-        msg: 'Forbidden category'
+        msg: 'Invalid category selected. Must be one of: concert, lecture, exhibition, master class, sport.'
       }
     }
   },
@@ -65,15 +50,13 @@ const Event = sequelize.define('Event', {
       key: 'id',
     },
     validate: {
-      isInt: {
-        msg: 'Creator ID must be a number'
-      }
+      isInt: { msg: 'Creator ID must be an integer.' }
     }
   }
 }, {
   timestamps: true,
   createdAt: 'created_at',
-  updatedAt: false,
+  updatedAt: false, 
   indexes: [
     { fields: ['date'] },
     { fields: ['created_by'] },
@@ -81,14 +64,14 @@ const Event = sequelize.define('Event', {
   ]
 });
 
-Event.belongsTo(User, { 
+Event.belongsTo(User, {
   foreignKey: 'created_by',
   as: 'creator'
 });
 
-User.hasMany(Event, { 
+User.hasMany(Event, {
   foreignKey: 'created_by',
-  as: 'events'
+  as: 'createdEvents'
 });
 
 module.exports = Event;
