@@ -14,7 +14,6 @@ dotenv.config();
 
 const app = express();
 
-// Swagger configuration
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
@@ -81,18 +80,15 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-// Middleware
 app.use(morgan('[API] :method :url :status - :response-time ms'));
 app.use(cors());
 app.use(express.json());
 
-// Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   explorer: true,
   customSiteTitle: "Events API Documentation"
 }));
 
-// Health check endpoint
 app.get('/', (req, res) => {
   res.json({
     status: 'success',
@@ -245,8 +241,6 @@ app.get('/users', async (req, res, next) => {
  *             schema:
  *               type: object
  *               properties:
- *                 status:
- *                   type: string
  *                 count:
  *                   type: integer
  *                 data:
@@ -299,8 +293,6 @@ app.get('/events', async (req, res, next) => {
  *             schema:
  *               type: object
  *               properties:
- *                 status:
- *                   type: string
  *                 data:
  *                   type: object
  *                   properties:
@@ -454,10 +446,26 @@ app.post('/events', async (req, res, next) => {
  *         schema:
  *           type: integer
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Event'
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Event title
+ *               description:
+ *                 type: string
+ *                 description: Event description
+ *               date:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Event date
+ *               category:
+ *                 type: string
+ *                 enum: ['concert', 'lecture', 'exhibition', 'master class', 'sport']
+ *                 description: Event category
  *     responses:
  *       200:
  *         description: Updated event
@@ -467,6 +475,12 @@ app.post('/events', async (req, res, next) => {
  *               $ref: '#/components/schemas/Event'
  *       400:
  *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Forbidden - cannot modify restricted fields
  *       404:
  *         description: Event not found
  *       500:
@@ -474,8 +488,13 @@ app.post('/events', async (req, res, next) => {
  */
 app.put('/events/:id', async (req, res, next) => {
   try {
-    const { title, description, date, category } = req.body;
+    const { title, description, date, category, id, created_by } = req.body;
     
+    // Проверка на попытку изменить запрещенные поля
+    if (id !== undefined || created_by !== undefined) {
+      throw new ApiError(403, 'Cannot modify ID or creator fields');
+    }
+
     if (!title && !description && !date && !category) {
       throw new ValidationError({}, 'At least one field to update is required');
     }
