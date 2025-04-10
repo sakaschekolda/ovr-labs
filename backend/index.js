@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const passport = require('./config/passport');
 const morgan = require('morgan');
 const cors = require('cors');
 const swaggerJsdoc = require('swagger-jsdoc');
@@ -29,6 +30,8 @@ if (missingEnvApp.length > 0) {
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+app.use(passport.initialize());
 
 const swaggerOptions = {
   definition: {

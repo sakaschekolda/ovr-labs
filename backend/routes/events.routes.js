@@ -1,8 +1,13 @@
 const express = require('express');
 const eventController = require('../controllers/event.controller');
 const { authenticateToken } = require('../middleware/auth.middleware');
+const passport = require('passport');
 
 const router = express.Router();
+
+router.post('/', passport.authenticate('jwt', { session: false }), eventController.createEvent);
+router.put('/:id', passport.authenticate('jwt', { session: false }), eventController.updateEvent);
+router.delete('/:id', passport.authenticate('jwt', { session: false }), eventController.deleteEvent);
 
 /**
  * @swagger
