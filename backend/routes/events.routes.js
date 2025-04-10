@@ -1,7 +1,5 @@
-// backend/routes/events.routes.js
 const express = require('express');
 const eventController = require('../controllers/event.controller');
-
 const router = express.Router();
 
 /**
@@ -100,7 +98,7 @@ router.get('/', eventController.getAllEvents);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
+ *             example  :
  *               message: "Internal Server Error. Please try again later."
  */
 router.get('/categories', eventController.getEventCategories);

@@ -49,8 +49,10 @@ exports.getEventById = async (req, res, next) => {
   try {
     const eventId = req.params.id;
     if (isNaN(parseInt(eventId))) {
-         throw new ValidationError({ id: "Event ID in URL must be an integer" });
-    }
+      return res.status(400).json({
+        message: 'Validation failed',
+        errors: { id: 'Event ID must be an integer' }
+      });    }
 
     const event = await Event.findByPk(eventId, {
       include: [{ model: User, as: 'creator', attributes: ['id', 'name'] }]
