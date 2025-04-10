@@ -1,22 +1,24 @@
+// routes/users.routes.js
+
 const express = require('express');
 const userController = require('../controllers/user.controller');
-const { authenticateToken } = require('../middleware/auth.middleware');
-
+const passport = require('passport'); // Используем passport
 const router = express.Router();
 
 /**
  * @swagger
  * tags:
  *   name: Users
- *   description: User management (creation is public, listing requires auth)
+ *   description: User management endpoints
  */
 
 /**
  * @swagger
  * /users:
  *   post:
- *     summary: Create a new user (Public)
+ *     summary: Create a new user (Public / Registration)
  *     tags: [Users]
+ *     description: This endpoint is typically handled by /auth/register now. Keeping for potential direct user creation if needed, otherwise consider removing or aliasing to register.
  *     requestBody:
  *       required: true
  *       content:
@@ -39,13 +41,7 @@ const router = express.Router();
  *                 data:
  *                   $ref: '#/components/schemas/User'
  *       400:
- *         description: Validation Error (e.g., missing fields, invalid email format, password too short)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       409:
- *         description: Conflict - Email already exists
+ *         description: Validation Error (e.g., missing fields, invalid email format, email exists)
  *         content:
  *           application/json:
  *             schema:
@@ -57,6 +53,7 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
+// POST /users остается публичным (регистрация вынесена в /auth/register, но этот может остаться для других целей)
 router.post('/', userController.createUser);
 
 /**
@@ -81,13 +78,11 @@ router.post('/', userController.createUser);
  *                   items:
  *                     $ref: '#/components/schemas/User'
  *       401:
- *         description: Authentication required (Missing or invalid token).
+ *         description: Authentication required or token invalid.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *                message: "Authentication required. Invalid or missing token."
  *       500:
  *         description: Internal Server Error
  *         content:
@@ -95,6 +90,6 @@ router.post('/', userController.createUser);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/', authenticateToken, userController.getAllUsers);
+router.get('/', passport.authenticate('jwt', { session: false }), userController.getAllUsers);
 
 module.exports = router;

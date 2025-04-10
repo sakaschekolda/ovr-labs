@@ -1,6 +1,7 @@
+// index.js
+
 require('dotenv').config();
 const express = require('express');
-const passport = require('./config/passport');
 const morgan = require('morgan');
 const cors = require('cors');
 const swaggerJsdoc = require('swagger-jsdoc');
@@ -9,8 +10,10 @@ const OpenApiValidator = require('express-openapi-validator');
 const sequelize = require('./db');
 const { NotFoundError, UnauthorizedError } = require('./error/errors');
 const errorHandler = require('./error/errorHandler');
+const passport = require('./config/passport');
 const mainApiRouter = require('./routes');
 const authRoutes = require('./routes/auth.routes');
+const publicRoutes = require('./routes/public.js');
 
 const requiredEnvDb = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST'];
 const missingEnvDb = requiredEnvDb.filter(key => !process.env[key]);
@@ -31,21 +34,25 @@ if (missingEnvApp.length > 0) {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(passport.initialize());
-
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'Events API',
       version: '1.0.0',
-      description: 'API for managing Users and Events with Authentication',
+      description: 'API for managing Users and Events with JWT Authentication (Public and Protected Routes)',
     },
     servers: [
       {
         url: `http://localhost:${PORT}`,
         description: 'Development server'
       }
+    ],
+    tags: [
+        { name: 'Authentication', description: 'User registration and login' },
+        { name: 'Public Events', description: 'Publicly accessible event endpoints' },
+        { name: 'Protected Events', description: 'Event management endpoints requiring authentication' },
+        { name: 'Users', description: 'User management endpoints (some protected)' }
     ],
     components: {
       securitySchemes: {
@@ -138,7 +145,7 @@ const swaggerOptions = {
       }
     },
   },
-  apis: ['./routes/*.routes.js'],
+  apis: ['./routes/*.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
@@ -148,12 +155,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(passport.initialize());
+
 app.use(
   OpenApiValidator.middleware({
     apiSpec: swaggerSpec,
     validateRequests: true,
     validateResponses: false,
-    ignorePaths: /\/api-docs|\/auth\/login/
+    ignorePaths: /\/api-docs|\/auth\/login|\/auth\/register/
   })
 );
 
@@ -188,19 +197,23 @@ app.use((err, req, res, next) => {
         }))
      });
   }
-  if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
-     console.error("JWT Error:", err.message);
-     return next(new UnauthorizedError(err.message));
+  if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError' || err.status === 401) {
+     console.error("JWT/Auth Error:", err.message);
+     const authError = (err instanceof UnauthorizedError) ? err : new UnauthorizedError(err.message || 'Authentication Failed');
+     return next(authError);
   }
 
   next(err);
 });
 
 app.use('/auth', authRoutes);
+app.use('/', publicRoutes);
 app.use('/', mainApiRouter);
 
 app.use((req, res, next) => {
-  next(new NotFoundError(`Endpoint ${req.method} ${req.originalUrl} not found`));
+  if (!res.headersSent) {
+    next(new NotFoundError(`Endpoint ${req.method} ${req.originalUrl} not found`));
+  }
 });
 
 app.use(errorHandler);

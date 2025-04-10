@@ -1,122 +1,23 @@
+// routes/events.routes.js
+
 const express = require('express');
 const eventController = require('../controllers/event.controller');
-const { authenticateToken } = require('../middleware/auth.middleware');
 const passport = require('passport');
-
 const router = express.Router();
-
-router.post('/', passport.authenticate('jwt', { session: false }), eventController.createEvent);
-router.put('/:id', passport.authenticate('jwt', { session: false }), eventController.updateEvent);
-router.delete('/:id', passport.authenticate('jwt', { session: false }), eventController.deleteEvent);
 
 /**
  * @swagger
  * tags:
- *   name: Events
- *   description: Event management (Reading is public, Creating/Updating/Deleting requires auth)
+ *   name: Protected Events
+ *   description: Event management endpoints requiring authentication
  */
-
-/**
- * @swagger
- * /events:
- *   get:
- *     summary: Retrieve a list of events (Public)
- *     tags: [Events]
- *     parameters:
- *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *           enum: [concert, lecture, exhibition, 'master class', sport]
- *         required: false
- *         description: Filter events by category.
- *     responses:
- *       200:
- *         description: A list of events, each including creator details.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 count:
- *                   type: integer
- *                   example: 10
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Event'
- *             example:
- *               count: 1
- *               data:
- *                 - id: 1
- *                   title: "Classic music concert"
- *                   description: "Event description"
- *                   date: "2024-10-26T20:00:00Z"
- *                   category: "concert"
- *                   created_by: 1
- *                   created_at: "2023-10-27T10:00:00Z"
- *                   creator: { id: 1, name: "Иван Иванов" }
- *       400:
- *          description: Invalid category specified in the query parameter.
- *          content:
- *            application/json:
- *              schema:
- *                $ref: '#/components/schemas/ErrorResponse'
- *              example:
- *                message: "Validation failed."
- *                errors:
- *                  category: "Invalid category query parameter. Must be one of: concert, lecture, exhibition, master class, sport"
- *       500:
- *         description: Internal Server Error occurred.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               message: "Internal Server Error. Please try again later."
- */
-router.get('/', eventController.getAllEvents);
-
-/**
- * @swagger
- * /events/categories:
- *   get:
- *     summary: Get the list of available event categories (Public)
- *     tags: [Events]
- *     responses:
- *       200:
- *         description: A list of valid category names.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: object
- *                   properties:
- *                     categories:
- *                       type: array
- *                       items:
- *                         type: string
- *                       example: ["concert", "lecture", "exhibition", "master class", "sport"]
- *       500:
- *         description: Internal Server Error occurred.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example  :
- *               message: "Internal Server Error. Please try again later."
- */
-router.get('/categories', eventController.getEventCategories);
-
 
 /**
  * @swagger
  * /events:
  *   post:
  *     summary: Create a new event (Requires Authentication)
- *     tags: [Events]
+ *     tags: [Protected Events]
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -149,7 +50,7 @@ router.get('/categories', eventController.getEventCategories);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
- *         description: Authentication required (Missing or invalid token).
+ *         description: Authentication required or token invalid.
  *         content:
  *           application/json:
  *             schema:
@@ -161,70 +62,7 @@ router.get('/categories', eventController.getEventCategories);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/', authenticateToken, eventController.createEvent);
-
-
-/**
- * @swagger
- * /events/{id}:
- *   get:
- *     summary: Retrieve a single event by its ID (Public)
- *     tags: [Events]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *         required: true
- *         description: Numeric ID of the event to retrieve.
- *     responses:
- *       200:
- *         description: Event details found successfully, includes creator information.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   $ref: '#/components/schemas/Event'
- *             example:
- *               data:
- *                 id: 1
- *                 title: "Classic music concert"
- *                 description: "Event description"
- *                 date: "2024-10-26T20:00:00Z"
- *                 category: "concert"
- *                 created_by: 1
- *                 created_at: "2023-10-27T10:00:00Z"
- *                 creator: { id: 1, name: "Иван Иванов" }
- *       400:
- *         description: Invalid ID supplied in the URL path (e.g., not an integer).
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *                message: "Validation failed."
- *                errors:
- *                  id: "Event ID must be an integer"
- *       404:
- *         description: Event with the specified ID was not found.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *                message: "Event not found."
- *       500:
- *         description: Internal Server Error occurred.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               message: "Internal Server Error. Please try again later."
- */
-router.get('/:id', eventController.getEventById);
+router.post('/', passport.authenticate('jwt', { session: false }), eventController.createEvent);
 
 
 /**
@@ -232,7 +70,7 @@ router.get('/:id', eventController.getEventById);
  * /events/{id}:
  *   put:
  *     summary: Update an existing event (Requires Authentication & Ownership)
- *     tags: [Events]
+ *     tags: [Protected Events]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -270,7 +108,7 @@ router.get('/:id', eventController.getEventById);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
- *         description: Authentication required (Missing or invalid token).
+ *         description: Authentication required or token invalid.
  *         content:
  *           application/json:
  *             schema:
@@ -281,8 +119,6 @@ router.get('/:id', eventController.getEventById);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *                 message: "You do not have permission to update this event."
  *       404:
  *         description: Event with the specified ID was not found.
  *         content:
@@ -296,7 +132,7 @@ router.get('/:id', eventController.getEventById);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.put('/:id', authenticateToken, eventController.updateEvent);
+router.put('/:id', passport.authenticate('jwt', { session: false }), eventController.updateEvent);
 
 
 /**
@@ -304,7 +140,7 @@ router.put('/:id', authenticateToken, eventController.updateEvent);
  * /events/{id}:
  *   delete:
  *     summary: Delete an event by its ID (Requires Authentication & Ownership)
- *     tags: [Events]
+ *     tags: [Protected Events]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -323,7 +159,7 @@ router.put('/:id', authenticateToken, eventController.updateEvent);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
- *         description: Authentication required (Missing or invalid token).
+ *         description: Authentication required or token invalid.
  *         content:
  *           application/json:
  *             schema:
@@ -334,8 +170,6 @@ router.put('/:id', authenticateToken, eventController.updateEvent);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *                 message: "You do not have permission to delete this event."
  *       404:
  *         description: Event with the specified ID was not found.
  *         content:
@@ -349,6 +183,6 @@ router.put('/:id', authenticateToken, eventController.updateEvent);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete('/:id', authenticateToken, eventController.deleteEvent);
+router.delete('/:id', passport.authenticate('jwt', { session: false }), eventController.deleteEvent);
 
 module.exports = router;

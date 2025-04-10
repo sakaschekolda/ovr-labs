@@ -27,9 +27,6 @@ exports.getAllEvents = async (req, res, next) => {
       data: events
     });
   } catch (error) {
-     if (error instanceof ValidationError || error.name === 'ValidationError') {
-       return next(error);
-     }
      next(error);
   }
 };
@@ -63,18 +60,17 @@ exports.getEventById = async (req, res, next) => {
 
     res.status(200).json({ data: event });
   } catch (error) {
-     if (error instanceof ValidationError || error.name === 'ValidationError' ||
-         error instanceof NotFoundError || error.name === 'NotFoundError') {
-       return next(error);
-     }
      next(error);
   }
 };
 
 exports.createEvent = async (req, res, next) => {
   try {
-    const { title, description, date, category } = req.body;
+    if (!req.user || !req.user.id) {
+        return next(new ApiError(401, 'Authentication failed, user not found on request.'));
+    }
     const created_by = req.user.id;
+    const { title, description, date, category } = req.body;
 
     const validationErrors = {};
     if (!title) validationErrors.title = 'Title is required';
@@ -114,12 +110,13 @@ exports.createEvent = async (req, res, next) => {
     res.status(201).json({ data: createdEventWithCreator || event });
 
   } catch (error) {
-    if (error instanceof ValidationError || error.name === 'ValidationError' || error.name === 'SequelizeValidationError') {
-         const errors = error.errors || {};
-         if (error.name === 'SequelizeValidationError') {
-             error.errors.forEach(err => { errors[err.path] = err.message; });
-         }
-         return next(new ValidationError(errors, error.message || 'Event creation failed validation.'));
+    if (error.name === 'SequelizeValidationError') {
+        const errors = {};
+        error.errors.forEach(err => { errors[err.path] = err.message; });
+        return next(new ValidationError(errors, 'Event creation failed database validation.'));
+    }
+    if (error.name === 'SequelizeForeignKeyConstraintError') {
+         return next(new ValidationError({ created_by: `Invalid user specified. User may not exist.` }, 'Failed to create event due to invalid creator reference.'));
      }
     next(error);
   }
@@ -127,6 +124,9 @@ exports.createEvent = async (req, res, next) => {
 
 exports.updateEvent = async (req, res, next) => {
     try {
+        if (!req.user || !req.user.id) {
+             return next(new ApiError(401, 'Authentication failed, user not found on request.'));
+        }
         const eventId = req.params.id;
         const userId = req.user.id;
         const { title, description, date, category } = req.body;
@@ -198,21 +198,10 @@ exports.updateEvent = async (req, res, next) => {
         res.status(200).json({ data: updatedEvent });
 
     } catch (error) {
-        if (error instanceof ValidationError || error.name === 'ValidationError' ||
-            error instanceof NotFoundError || error.name === 'NotFoundError' ||
-            error instanceof ForbiddenError ||
-            error.name === 'SequelizeValidationError') {
-
-            let errors = error.errors || {};
-            let message = error.message || 'Event update failed.';
-            if (error.name === 'SequelizeValidationError') {
-                errors = {};
-                error.errors.forEach(err => { errors[err.path] = err.message; });
-                message = 'Event update failed database validation.';
-            }
-            if (error instanceof NotFoundError) return next(error);
-            if (error instanceof ForbiddenError) return next(error);
-            return next(new ValidationError(errors, message));
+         if (error.name === 'SequelizeValidationError') {
+            const errors = {};
+            error.errors.forEach(err => { errors[err.path] = err.message; });
+            return next(new ValidationError(errors, 'Event update failed database validation.'));
         }
         next(error);
     }
@@ -220,6 +209,9 @@ exports.updateEvent = async (req, res, next) => {
 
 exports.deleteEvent = async (req, res, next) => {
   try {
+     if (!req.user || !req.user.id) {
+        return next(new ApiError(401, 'Authentication failed, user not found on request.'));
+     }
      const eventId = req.params.id;
      const userId = req.user.id;
 
@@ -249,11 +241,6 @@ exports.deleteEvent = async (req, res, next) => {
      res.status(204).end();
 
   } catch (error) {
-     if (error instanceof ValidationError || error.name === 'ValidationError' ||
-         error instanceof NotFoundError || error.name === 'NotFoundError' ||
-         error instanceof ForbiddenError) {
-         return next(error);
-     }
     next(error);
   }
 };
