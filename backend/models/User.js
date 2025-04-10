@@ -30,6 +30,11 @@ const User = sequelize.define('User', {
   password: {
     type: DataTypes.STRING,
     allowNull: true,
+  },
+  role: {
+    type: DataTypes.ENUM('user', 'admin'),
+    allowNull: false,
+    defaultValue: 'user'
   }
 }, {
   timestamps: true,
@@ -47,6 +52,9 @@ const User = sequelize.define('User', {
    beforeCreate: async (user) => {
       if (user.password) {
         user.password = await bcrypt.hash(user.password, SALT_ROUNDS);
+      }
+      if (!user.role) {
+          user.role = 'user';
       }
     },
     beforeUpdate: async (user) => {

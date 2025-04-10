@@ -18,7 +18,7 @@ exports.getAllEvents = async (req, res, next) => {
 
     const events = await Event.findAll({
       where,
-      include: [{ model: User, as: 'creator', attributes: ['id', 'name'] }],
+      include: [{ model: User, as: 'creator', attributes: ['id', 'name', 'role'] }],
       order: [['date', 'ASC']]
     });
 
@@ -51,7 +51,7 @@ exports.getEventById = async (req, res, next) => {
     }
 
     const event = await Event.findByPk(eventId, {
-      include: [{ model: User, as: 'creator', attributes: ['id', 'name'] }]
+      include: [{ model: User, as: 'creator', attributes: ['id', 'name', 'role'] }]
     });
 
     if (!event) {
@@ -104,7 +104,7 @@ exports.createEvent = async (req, res, next) => {
     });
 
     const createdEventWithCreator = await Event.findByPk(event.id, {
-       include: [{ model: User, as: 'creator', attributes: ['id', 'name'] }]
+       include: [{ model: User, as: 'creator', attributes: ['id', 'name', 'role'] }]
     });
 
     res.status(201).json({ data: createdEventWithCreator || event });
@@ -129,6 +129,7 @@ exports.updateEvent = async (req, res, next) => {
         }
         const eventId = req.params.id;
         const userId = req.user.id;
+        const userRole = req.user.role;
         const { title, description, date, category } = req.body;
         const { id: bodyId, created_by: bodyCreatedBy } = req.body;
 
@@ -143,41 +144,33 @@ exports.updateEvent = async (req, res, next) => {
         const validationErrors = {};
         let hasUpdate = false;
 
-        if (title !== undefined) {
-            if (typeof title !== 'string' || title.length < 3 || title.length > 100) {
-                validationErrors.title = 'Event title must be between 3 and 100 characters.'
-            } else { updateData.title = title; hasUpdate = true; }
-        }
-        if (description !== undefined) {
-             if (description !== null && (typeof description !== 'string' || description.length > 2000)) {
-                 validationErrors.description = 'Description cannot exceed 2000 characters.'
-             } else { updateData.description = description; hasUpdate = true; }
-        }
-        if (date !== undefined) {
-            if (isNaN(Date.parse(date))) { validationErrors.date = 'Invalid date format provided.'; }
-            else if (new Date(date) <= new Date()) { validationErrors.date = 'Event date must be in the future.'; }
-            else { updateData.date = date; hasUpdate = true; }
+         if (title !== undefined) {
+             if (typeof title !== 'string' || title.length < 3 || title.length > 100) { validationErrors.title = 'Event title must be between 3 and 100 characters.' } else { updateData.title = title; hasUpdate = true; }
          }
-        if (category !== undefined) {
-            if (!VALID_CATEGORIES.includes(category)) { validationErrors.category = `Invalid category selected. Must be one of: ${VALID_CATEGORIES.join(', ')}`; }
-            else { updateData.category = category; hasUpdate = true; }
-        }
+         if (description !== undefined) {
+             if (description !== null && (typeof description !== 'string' || description.length > 2000)) { validationErrors.description = 'Description cannot exceed 2000 characters.' } else { updateData.description = description; hasUpdate = true; }
+         }
+         if (date !== undefined) {
+             if (isNaN(Date.parse(date))) { validationErrors.date = 'Invalid date format provided.'; } else if (new Date(date) <= new Date()) { validationErrors.date = 'Event date must be in the future.'; } else { updateData.date = date; hasUpdate = true; }
+          }
+         if (category !== undefined) {
+             if (!VALID_CATEGORIES.includes(category)) { validationErrors.category = `Invalid category selected. Must be one of: ${VALID_CATEGORIES.join(', ')}`; } else { updateData.category = category; hasUpdate = true; }
+         }
+
 
         if (Object.keys(validationErrors).length > 0) {
             throw new ValidationError(validationErrors, 'Event update failed validation.');
         }
-        if (!hasUpdate && Object.keys(req.body).length > 0) {
-             const allowedFields = ['title', 'description', 'date', 'category'];
-             const providedFields = Object.keys(req.body);
-             const invalidFields = providedFields.filter(f => !allowedFields.includes(f));
-
-             if (invalidFields.length > 0) {
-                  throw new ValidationError({ fields: `Invalid or non-updatable fields provided: ${invalidFields.join(', ')}. Allowed fields are: ${allowedFields.join(', ')}.` }, 'Invalid update request.');
+        if (!hasUpdate) {
+             if (Object.keys(req.body).length > 0) {
+                const allowedFields = ['title', 'description', 'date', 'category'];
+                const providedFields = Object.keys(req.body);
+                const invalidFields = providedFields.filter(f => !allowedFields.includes(f));
+                 if (invalidFields.length > 0) { throw new ValidationError({ fields: `Invalid or non-updatable fields provided: ${invalidFields.join(', ')}. Allowed fields are: ${allowedFields.join(', ')}.` }, 'Invalid update request.'); }
+                 else { throw new ValidationError({ general: 'No valid fields provided for update. Allowed fields are: title, description, date, category.' }, 'Invalid update request.'); }
              } else {
-                 throw new ValidationError({ general: 'No valid fields provided for update. Allowed fields are: title, description, date, category.' }, 'Invalid update request.');
+                 throw new ValidationError({ general: 'Request body is empty. Provide at least one field to update (title, description, date, category).' }, 'Invalid update request.');
              }
-        } else if (!hasUpdate) {
-             throw new ValidationError({ general: 'Request body is empty. Provide at least one field to update (title, description, date, category).' }, 'Invalid update request.');
         }
 
         const existingEvent = await Event.findByPk(eventId);
@@ -185,14 +178,14 @@ exports.updateEvent = async (req, res, next) => {
             throw new NotFoundError('Event');
         }
 
-        if (existingEvent.created_by !== userId) {
+        if (existingEvent.created_by !== userId /* && userRole !== 'admin' */) {
              throw new ForbiddenError('You do not have permission to update this event.');
         }
 
         existingEvent.set(updateData);
         await existingEvent.save();
         const updatedEvent = await Event.findByPk(eventId, {
-            include: [{ model: User, as: 'creator', attributes: ['id', 'name'] }]
+            include: [{ model: User, as: 'creator', attributes: ['id', 'name', 'role'] }]
         });
 
         res.status(200).json({ data: updatedEvent });
@@ -214,6 +207,7 @@ exports.deleteEvent = async (req, res, next) => {
      }
      const eventId = req.params.id;
      const userId = req.user.id;
+     const userRole = req.user.role;
 
       if (isNaN(parseInt(eventId))) {
          throw new ValidationError({ id: "Event ID must be an integer" });
@@ -225,7 +219,7 @@ exports.deleteEvent = async (req, res, next) => {
        throw new NotFoundError('Event');
      }
 
-     if (eventToDelete.created_by !== userId) {
+     if (eventToDelete.created_by !== userId /* && userRole !== 'admin' */) {
         throw new ForbiddenError('You do not have permission to delete this event.');
      }
 

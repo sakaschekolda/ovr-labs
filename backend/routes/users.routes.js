@@ -2,7 +2,9 @@
 
 const express = require('express');
 const userController = require('../controllers/user.controller');
-const passport = require('passport'); // Используем passport
+const passport = require('passport');
+const { isAdmin } = require('../middleware/authz.middleware'); // Импорт middleware
+
 const router = express.Router();
 
 /**
@@ -18,7 +20,7 @@ const router = express.Router();
  *   post:
  *     summary: Create a new user (Public / Registration)
  *     tags: [Users]
- *     description: This endpoint is typically handled by /auth/register now. Keeping for potential direct user creation if needed, otherwise consider removing or aliasing to register.
+ *     description: Endpoint for user creation. Role defaults to 'user'. Prefer /auth/register.
  *     requestBody:
  *       required: true
  *       content:
@@ -27,9 +29,9 @@ const router = express.Router();
  *             type: object
  *             required: [name, email]
  *             properties:
- *               name: { type: string, example: "Иван Иванов" }
- *               email: { type: string, format: email, example: "ivan@example.com" }
- *               password: { type: string, format: password, description: "User's password (min 8 chars recommended)", example: "password123" }
+ *               name: { type: string }
+ *               email: { type: string, format: email }
+ *               password: { type: string, format: password }
  *     responses:
  *       201:
  *         description: User created successfully
@@ -41,7 +43,7 @@ const router = express.Router();
  *                 data:
  *                   $ref: '#/components/schemas/User'
  *       400:
- *         description: Validation Error (e.g., missing fields, invalid email format, email exists)
+ *         description: Validation Error
  *         content:
  *           application/json:
  *             schema:
@@ -53,26 +55,25 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-// POST /users остается публичным (регистрация вынесена в /auth/register, но этот может остаться для других целей)
 router.post('/', userController.createUser);
 
 /**
  * @swagger
  * /users:
  *   get:
- *     summary: Retrieve a list of all users (Requires Authentication)
+ *     summary: Retrieve a list of all users (Requires Admin Role)
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: A list of users (passwords excluded).
+ *         description: A list of users.
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 count: { type: integer, example: 5 }
+ *                 count: { type: integer }
  *                 data:
  *                   type: array
  *                   items:
@@ -83,6 +84,12 @@ router.post('/', userController.createUser);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Access denied. Administrator privileges required.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         description: Internal Server Error
  *         content:
@@ -90,6 +97,85 @@ router.post('/', userController.createUser);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/', passport.authenticate('jwt', { session: false }), userController.getAllUsers);
+// Порядок: сначала аутентификация, потом проверка роли админа
+router.get('/', passport.authenticate('jwt', { session: false }), isAdmin, userController.getAllUsers);
+
+// --- Опциональный роут для смены роли ---
+/**
+ * @swagger
+ * /users/{id}/role:
+ *   patch:
+ *     summary: Change the role of a user (Requires Admin Role)
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the user whose role is to be changed.
+ *     requestBody:
+ *       required: true
+ *       description: The new role for the user.
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - role
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [user, admin]
+ *                 example: "admin"
+ *     responses:
+ *       200:
+ *         description: User role updated successfully. Returns the updated user.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                  message:
+ *                      type: string
+ *                      example: "User role updated successfully."
+ *                  user:
+ *                      $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation Error (Invalid role provided or invalid user ID format).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Authentication required or token invalid.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Access denied. Administrator privileges required.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User with the specified ID not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+// Порядок: сначала аутентификация, потом проверка роли админа
+router.patch('/:id/role', passport.authenticate('jwt', { session: false }), isAdmin, userController.changeUserRole);
+
 
 module.exports = router;
