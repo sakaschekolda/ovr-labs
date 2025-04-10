@@ -1,6 +1,7 @@
 const Event = require('../models/Event');
 const User = require('../models/User');
-const { ApiError, ValidationError, NotFoundError } = require('../error/errors');
+const { ApiError, ValidationError, NotFoundError, ForbiddenError } = require('../error/errors');
+
 const VALID_CATEGORIES = ['concert', 'lecture', 'exhibition', 'master class', 'sport'];
 
 exports.getAllEvents = async (req, res, next) => {
@@ -33,7 +34,7 @@ exports.getAllEvents = async (req, res, next) => {
   }
 };
 
-exports.getEventCategories = (req, res) => {
+exports.getEventCategories = (req, res, next) => {
   try {
     res.status(200).json({
       data: {
@@ -49,10 +50,8 @@ exports.getEventById = async (req, res, next) => {
   try {
     const eventId = req.params.id;
     if (isNaN(parseInt(eventId))) {
-      return res.status(400).json({
-        message: 'Validation failed',
-        errors: { id: 'Event ID must be an integer' }
-      });    }
+       throw new ValidationError({ id: "Event ID must be an integer" });
+    }
 
     const event = await Event.findByPk(eventId, {
       include: [{ model: User, as: 'creator', attributes: ['id', 'name'] }]
@@ -74,39 +73,27 @@ exports.getEventById = async (req, res, next) => {
 
 exports.createEvent = async (req, res, next) => {
   try {
-    const { title, description, date, created_by, category } = req.body;
+    const { title, description, date, category } = req.body;
+    const created_by = req.user.id;
 
     const validationErrors = {};
     if (!title) validationErrors.title = 'Title is required';
 
-    if (!date) {
-      validationErrors.date = 'Date is required';
-    } else if (isNaN(Date.parse(date))) {
-       validationErrors.date = 'Invalid date format provided.';
-    } else if (new Date(date) <= new Date()) {
-       validationErrors.date = 'Event date must be in the future.';
-    }
-
-    if (created_by === undefined || created_by === null) {
-        validationErrors.created_by = 'Creator ID (created_by) is required';
-    } else if (isNaN(parseInt(created_by))) {
-         validationErrors.created_by = 'Creator ID must be an integer';
-    }
-
-    if (!category) {
-        validationErrors.category = 'Category is required';
-    } else if (!VALID_CATEGORIES.includes(category)) {
-         validationErrors.category = `Invalid category selected. Must be one of: ${VALID_CATEGORIES.join(', ')}`;
-    }
-    if (created_by && !isNaN(parseInt(created_by))) {
-        const creatorExists = await User.findByPk(created_by);
-        if (!creatorExists) {
-            validationErrors.created_by = `User with ID ${created_by} not found. Cannot create event.`;
-        }
-    }
-    if (description && description.length > 2000) {
-       validationErrors.description = 'Description cannot exceed 2000 characters.';
-    }
+     if (!date) {
+       validationErrors.date = 'Date is required';
+     } else if (isNaN(Date.parse(date))) {
+        validationErrors.date = 'Invalid date format provided.';
+     } else if (new Date(date) <= new Date()) {
+        validationErrors.date = 'Event date must be in the future.';
+     }
+     if (!category) {
+         validationErrors.category = 'Category is required';
+     } else if (!VALID_CATEGORIES.includes(category)) {
+          validationErrors.category = `Invalid category selected. Must be one of: ${VALID_CATEGORIES.join(', ')}`;
+     }
+     if (description && description.length > 2000) {
+        validationErrors.description = 'Description cannot exceed 2000 characters.';
+     }
 
     if (Object.keys(validationErrors).length > 0) {
         throw new ValidationError(validationErrors, 'Event creation failed validation.');
@@ -119,6 +106,7 @@ exports.createEvent = async (req, res, next) => {
       created_by,
       category
     });
+
     const createdEventWithCreator = await Event.findByPk(event.id, {
        include: [{ model: User, as: 'creator', attributes: ['id', 'name'] }]
     });
@@ -126,17 +114,12 @@ exports.createEvent = async (req, res, next) => {
     res.status(201).json({ data: createdEventWithCreator || event });
 
   } catch (error) {
-    if (error instanceof ValidationError || error.name === 'ValidationError') {
-        return next(error);
-    }
-
-    if (error.name === 'SequelizeValidationError') {
-        const errors = {};
-        error.errors.forEach(err => { errors[err.path] = err.message; });
-        return next(new ValidationError(errors, 'Event creation failed database validation.'));
-    }
-     if (error.name === 'SequelizeForeignKeyConstraintError') {
-         return next(new ValidationError({ created_by: `Invalid user specified (ID: ${req.body.created_by}). User may not exist.` }, 'Failed to create event due to invalid creator reference.'));
+    if (error instanceof ValidationError || error.name === 'ValidationError' || error.name === 'SequelizeValidationError') {
+         const errors = error.errors || {};
+         if (error.name === 'SequelizeValidationError') {
+             error.errors.forEach(err => { errors[err.path] = err.message; });
+         }
+         return next(new ValidationError(errors, error.message || 'Event creation failed validation.'));
      }
     next(error);
   }
@@ -144,15 +127,16 @@ exports.createEvent = async (req, res, next) => {
 
 exports.updateEvent = async (req, res, next) => {
     try {
+        const eventId = req.params.id;
+        const userId = req.user.id;
         const { title, description, date, category } = req.body;
         const { id: bodyId, created_by: bodyCreatedBy } = req.body;
-        const eventId = req.params.id;
 
         if (isNaN(parseInt(eventId))) {
             throw new ValidationError({ id: "Event ID in URL must be an integer" });
         }
         if (bodyId !== undefined || bodyCreatedBy !== undefined) {
-            throw new ApiError(403, 'Cannot modify event ID or creator (created_by) field via request body.');
+            throw new ValidationError({ general: 'Cannot modify event ID or creator (created_by) field via request body.' }, 'Invalid update request.');
         }
 
         const updateData = {};
@@ -183,14 +167,26 @@ exports.updateEvent = async (req, res, next) => {
             throw new ValidationError(validationErrors, 'Event update failed validation.');
         }
         if (!hasUpdate && Object.keys(req.body).length > 0) {
-            throw new ValidationError({}, 'No valid fields provided for update. Allowed fields are: title, description, date, category.');
+             const allowedFields = ['title', 'description', 'date', 'category'];
+             const providedFields = Object.keys(req.body);
+             const invalidFields = providedFields.filter(f => !allowedFields.includes(f));
+
+             if (invalidFields.length > 0) {
+                  throw new ValidationError({ fields: `Invalid or non-updatable fields provided: ${invalidFields.join(', ')}. Allowed fields are: ${allowedFields.join(', ')}.` }, 'Invalid update request.');
+             } else {
+                 throw new ValidationError({ general: 'No valid fields provided for update. Allowed fields are: title, description, date, category.' }, 'Invalid update request.');
+             }
         } else if (!hasUpdate) {
-             throw new ValidationError({}, 'Request body is empty or contains only non-updatable fields.');
+             throw new ValidationError({ general: 'Request body is empty. Provide at least one field to update (title, description, date, category).' }, 'Invalid update request.');
         }
 
         const existingEvent = await Event.findByPk(eventId);
         if (!existingEvent) {
             throw new NotFoundError('Event');
+        }
+
+        if (existingEvent.created_by !== userId) {
+             throw new ForbiddenError('You do not have permission to update this event.');
         }
 
         existingEvent.set(updateData);
@@ -204,14 +200,19 @@ exports.updateEvent = async (req, res, next) => {
     } catch (error) {
         if (error instanceof ValidationError || error.name === 'ValidationError' ||
             error instanceof NotFoundError || error.name === 'NotFoundError' ||
-            error instanceof ApiError) {
-            return next(error);
-        }
+            error instanceof ForbiddenError ||
+            error.name === 'SequelizeValidationError') {
 
-        if (error.name === 'SequelizeValidationError') {
-            const errors = {};
-            error.errors.forEach(err => { errors[err.path] = err.message; });
-            return next(new ValidationError(errors, 'Event update failed database validation.'));
+            let errors = error.errors || {};
+            let message = error.message || 'Event update failed.';
+            if (error.name === 'SequelizeValidationError') {
+                errors = {};
+                error.errors.forEach(err => { errors[err.path] = err.message; });
+                message = 'Event update failed database validation.';
+            }
+            if (error instanceof NotFoundError) return next(error);
+            if (error instanceof ForbiddenError) return next(error);
+            return next(new ValidationError(errors, message));
         }
         next(error);
     }
@@ -220,8 +221,20 @@ exports.updateEvent = async (req, res, next) => {
 exports.deleteEvent = async (req, res, next) => {
   try {
      const eventId = req.params.id;
+     const userId = req.user.id;
+
       if (isNaN(parseInt(eventId))) {
          throw new ValidationError({ id: "Event ID must be an integer" });
+     }
+
+     const eventToDelete = await Event.findByPk(eventId);
+
+     if (!eventToDelete) {
+       throw new NotFoundError('Event');
+     }
+
+     if (eventToDelete.created_by !== userId) {
+        throw new ForbiddenError('You do not have permission to delete this event.');
      }
 
      const deletedCount = await Event.destroy({
@@ -229,13 +242,16 @@ exports.deleteEvent = async (req, res, next) => {
      });
 
      if (deletedCount === 0) {
-       throw new NotFoundError('Event');
+        console.warn(`Attempted to delete event ${eventId} after ownership check, but destroy returned 0.`);
+        throw new NotFoundError('Event');
      }
 
      res.status(204).end();
+
   } catch (error) {
      if (error instanceof ValidationError || error.name === 'ValidationError' ||
-         error instanceof NotFoundError || error.name === 'NotFoundError') {
+         error instanceof NotFoundError || error.name === 'NotFoundError' ||
+         error instanceof ForbiddenError) {
          return next(error);
      }
     next(error);

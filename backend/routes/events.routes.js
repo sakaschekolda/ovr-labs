@@ -1,26 +1,28 @@
 const express = require('express');
 const eventController = require('../controllers/event.controller');
+const { authenticateToken } = require('../middleware/auth.middleware');
+
 const router = express.Router();
 
 /**
  * @swagger
  * tags:
  *   name: Events
- *   description: Event management and retrieval endpoints.
+ *   description: Event management (Reading is public, Creating/Updating/Deleting requires auth)
  */
 
 /**
  * @swagger
  * /events:
  *   get:
- *     summary: Retrieve a list of events, optionally filtered by category
+ *     summary: Retrieve a list of events (Public)
  *     tags: [Events]
  *     parameters:
  *       - in: query
  *         name: category
  *         schema:
  *           type: string
- *           enum: [concert, lecture, exhibition, 'master class', sport] # Ensure enum matches VALID_CATEGORIES
+ *           enum: [concert, lecture, exhibition, 'master class', sport]
  *         required: false
  *         description: Filter events by category.
  *     responses:
@@ -37,7 +39,7 @@ const router = express.Router();
  *                 data:
  *                   type: array
  *                   items:
- *                     $ref: '#/components/schemas/Event' # Reference the Event schema defined in index.js
+ *                     $ref: '#/components/schemas/Event'
  *             example:
  *               count: 1
  *               data:
@@ -49,17 +51,17 @@ const router = express.Router();
  *                   created_by: 1
  *                   created_at: "2023-10-27T10:00:00Z"
  *                   creator: { id: 1, name: "Иван Иванов" }
- *       400: # Validation Error on Query Parameter
+ *       400:
  *          description: Invalid category specified in the query parameter.
  *          content:
  *            application/json:
  *              schema:
- *                $ref: '#/components/schemas/ErrorResponse' # Reference ErrorResponse schema
+ *                $ref: '#/components/schemas/ErrorResponse'
  *              example:
  *                message: "Validation failed."
  *                errors:
  *                  category: "Invalid category query parameter. Must be one of: concert, lecture, exhibition, master class, sport"
- *       500: # Server Error
+ *       500:
  *         description: Internal Server Error occurred.
  *         content:
  *           application/json:
@@ -74,7 +76,7 @@ router.get('/', eventController.getAllEvents);
  * @swagger
  * /events/categories:
  *   get:
- *     summary: Get the list of available event categories
+ *     summary: Get the list of available event categories (Public)
  *     tags: [Events]
  *     responses:
  *       200:
@@ -92,7 +94,7 @@ router.get('/', eventController.getAllEvents);
  *                       items:
  *                         type: string
  *                       example: ["concert", "lecture", "exhibition", "master class", "sport"]
- *       500: # Server Error
+ *       500:
  *         description: Internal Server Error occurred.
  *         content:
  *           application/json:
@@ -103,29 +105,31 @@ router.get('/', eventController.getAllEvents);
  */
 router.get('/categories', eventController.getEventCategories);
 
+
 /**
  * @swagger
  * /events:
  *   post:
- *     summary: Create a new event
+ *     summary: Create a new event (Requires Authentication)
  *     tags: [Events]
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
- *       description: Event object to be created. `title`, `date`, `created_by`, and `category` are required. `date` must be in the future. `created_by` must be a valid User ID.
+ *       description: Event object. `title`, `date`, `category` required. `date` must be future. `created_by` is set automatically from authenticated user.
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [title, date, created_by, category]
+ *             required: [title, date, category]
  *             properties:
  *               title: { type: string, example: "Summer Tech Conference" }
  *               description: { type: string, nullable: true, example: "Annual web dev conference." }
  *               date: { type: string, format: date-time, description: "Must be a future date", example: "2024-09-20T09:00:00Z" }
- *               created_by: { type: integer, description: "ID of the user creating the event", example: 1 }
  *               category: { type: string, enum: [concert, lecture, exhibition, 'master class', sport], example: "lecture" }
  *     responses:
  *       201:
- *         description: Event created successfully. The response includes the created event data along with creator details.
+ *         description: Event created successfully. Includes creator details.
  *         content:
  *           application/json:
  *             schema:
@@ -133,45 +137,33 @@ router.get('/categories', eventController.getEventCategories);
  *               properties:
  *                 data:
  *                   $ref: '#/components/schemas/Event'
- *             example:
- *               data:
- *                 id: 2
- *                 title: "Summer Tech Conference"
- *                 description: "Annual web dev conference."
- *                 date: "2024-09-20T09:00:00Z"
- *                 category: "lecture"
- *                 created_by: 1
- *                 created_at: "2023-10-28T11:00:00Z"
- *                 creator: { id: 1, name: "Иван Иванов" }
- *       # --- 400 Bad Request Definition ---
  *       400:
- *         description: Validation Error. Occurs if required fields are missing, data formats are incorrect (e.g., date), enum values are invalid, the date is not in the future, or the referenced `created_by` user ID does not exist.
+ *         description: Validation Error (e.g., missing fields, invalid format, date not future).
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ErrorResponse' # Correctly references the ErrorResponse schema
- *             example: # Example for missing fields
- *               message: "Event creation failed validation."
- *               errors:
- *                 created_by: "Creator ID (created_by) is required"
- *                 category: "Category is required"
- *       # --- End 400 Definition ---
- *       500: # Server Error
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Authentication required (Missing or invalid token).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
  *         description: Internal Server Error occurred.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               message: "Internal Server Error. Please try again later."
  */
-router.post('/', eventController.createEvent);
+router.post('/', authenticateToken, eventController.createEvent);
+
 
 /**
  * @swagger
  * /events/{id}:
  *   get:
- *     summary: Retrieve a single event by its ID
+ *     summary: Retrieve a single event by its ID (Public)
  *     tags: [Events]
  *     parameters:
  *       - in: path
@@ -200,7 +192,7 @@ router.post('/', eventController.createEvent);
  *                 created_by: 1
  *                 created_at: "2023-10-27T10:00:00Z"
  *                 creator: { id: 1, name: "Иван Иванов" }
- *       400: # Validation Error on Path Parameter
+ *       400:
  *         description: Invalid ID supplied in the URL path (e.g., not an integer).
  *         content:
  *           application/json:
@@ -209,8 +201,8 @@ router.post('/', eventController.createEvent);
  *             example:
  *                message: "Validation failed."
  *                errors:
- *                  id: "Event ID in URL must be an integer"
- *       404: # Not Found
+ *                  id: "Event ID must be an integer"
+ *       404:
  *         description: Event with the specified ID was not found.
  *         content:
  *           application/json:
@@ -218,7 +210,7 @@ router.post('/', eventController.createEvent);
  *               $ref: '#/components/schemas/ErrorResponse'
  *             example:
  *                message: "Event not found."
- *       500: # Server Error
+ *       500:
  *         description: Internal Server Error occurred.
  *         content:
  *           application/json:
@@ -229,34 +221,36 @@ router.post('/', eventController.createEvent);
  */
 router.get('/:id', eventController.getEventById);
 
+
 /**
  * @swagger
  * /events/{id}:
  *   put:
- *     summary: Update an existing event
+ *     summary: Update an existing event (Requires Authentication & Ownership)
  *     tags: [Events]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
- *         schema:
- *           type: integer
+ *         schema: { type: integer }
  *         required: true
  *         description: Numeric ID of the event to update.
  *     requestBody:
- *       description: Object containing event fields to update. Only `title`, `description`, `date`, and `category` can be updated. Provide at least one valid field. `id` and `created_by` cannot be updated via the request body.
+ *       description: Object with fields to update (`title`, `description`, `date`, `category`). Provide at least one. Must own the event.
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             properties: # Only show updatable fields
+ *             properties:
  *               title: { type: string, example: "Updated Conference Title" }
  *               description: { type: string, nullable: true, example: "Updated description." }
  *               date: { type: string, format: date-time, description: "Must be a future date", example: "2024-09-21T10:00:00Z" }
  *               category: { type: string, enum: [concert, lecture, exhibition, 'master class', sport], example: "lecture" }
  *     responses:
  *       200:
- *         description: Event updated successfully. Response includes the full updated event data with creator details.
+ *         description: Event updated successfully. Includes updated event data.
  *         content:
  *           application/json:
  *             schema:
@@ -264,96 +258,92 @@ router.get('/:id', eventController.getEventById);
  *               properties:
  *                 data:
  *                   $ref: '#/components/schemas/Event'
- *             example:
- *               data:
- *                 id: 1
- *                 title: "Updated Conference Title"
- *                 description: "Updated description."
- *                 date: "2024-09-21T10:00:00Z"
- *                 category: "lecture"
- *                 created_by: 1
- *                 created_at: "2023-10-27T10:00:00Z" # created_at doesn't change on update in this setup
- *                 creator: { id: 1, name: "Иван Иванов" }
- *       400: # Validation Error
- *         description: Validation Error. Occurs if the path ID is invalid, provided data is invalid (e.g., bad date format, past date, invalid category), or if no valid fields for update are provided.
+ *       400:
+ *         description: Validation Error (Invalid ID, invalid data, no valid fields provided, attempt to update immutable fields).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Authentication required (Missing or invalid token).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Permission denied (User does not own the event).
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *             example:
- *               message: "Event update failed validation."
- *               errors:
- *                 date: "Event date must be in the future."
- *       403: # Forbidden
- *         description: Forbidden. Attempted to update restricted fields like `id` or `created_by` in the request body.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               message: "Cannot modify event ID or creator (created_by) field via request body."
- *       404: # Not Found
+ *                 message: "You do not have permission to update this event."
+ *       404:
  *         description: Event with the specified ID was not found.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *                message: "Event not found."
- *       500: # Server Error
+ *       500:
  *         description: Internal Server Error occurred.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               message: "Internal Server Error. Please try again later."
  */
-router.put('/:id', eventController.updateEvent);
+router.put('/:id', authenticateToken, eventController.updateEvent);
+
 
 /**
  * @swagger
  * /events/{id}:
  *   delete:
- *     summary: Delete an event by its ID
+ *     summary: Delete an event by its ID (Requires Authentication & Ownership)
  *     tags: [Events]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
- *         schema:
- *           type: integer
+ *         schema: { type: integer }
  *         required: true
- *         description: Numeric ID of the event to delete.
+ *         description: Numeric ID of the event to delete. Must own the event.
  *     responses:
- *       204: # Success, No Content
- *         description: Event deleted successfully. No response body.
- *       400: # Validation Error on Path Parameter
- *         description: Invalid ID supplied in the URL path (e.g., not an integer).
+ *       204:
+ *         description: Event deleted successfully.
+ *       400:
+ *         description: Invalid ID supplied.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Authentication required (Missing or invalid token).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Permission denied (User does not own the event).
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *             example:
- *                message: "Validation failed."
- *                errors:
- *                  id: "Event ID must be an integer"
- *       404: # Not Found
+ *                 message: "You do not have permission to delete this event."
+ *       404:
  *         description: Event with the specified ID was not found.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *                message: "Event not found."
- *       500: # Server Error
+ *       500:
  *         description: Internal Server Error occurred.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               message: "Internal Server Error. Please try again later."
  */
-router.delete('/:id', eventController.deleteEvent);
+router.delete('/:id', authenticateToken, eventController.deleteEvent);
 
 module.exports = router;

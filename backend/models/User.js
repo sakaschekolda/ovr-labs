@@ -1,4 +1,3 @@
-// backend/models/User.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../db');
 const bcrypt = require('bcrypt');
@@ -63,13 +62,19 @@ const User = sequelize.define('User', {
 });
 
 User.prototype.validPassword = async function(passwordToVerify) {
+  let userWithHash = this;
   if (!this.password) {
-    console.warn(`Attempted password validation for User ${this.id} without hash. Refetching...`);
-    const userWithHash = await User.scope('withPassword').findByPk(this.id);
-    if (!userWithHash || !userWithHash.password) return false;
-    return bcrypt.compare(passwordToVerify, userWithHash.password);
+    console.warn(`Password hash not present on User instance ${this.id}. Refetching with password scope...`);
+    userWithHash = await User.scope('withPassword').findByPk(this.id);
+    if (!userWithHash || !userWithHash.password) {
+        console.error(`Failed to refetch user ${this.id} with password or password hash is null.`);
+        return false;
+    }
   }
-  return bcrypt.compare(passwordToVerify, this.password);
+  if (!userWithHash.password) {
+      return false;
+  }
+  return bcrypt.compare(passwordToVerify, userWithHash.password);
 };
 
 module.exports = User;

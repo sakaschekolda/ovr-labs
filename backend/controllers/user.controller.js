@@ -33,6 +33,9 @@ exports.createUser = async (req, res, next) => {
         error.errors.forEach(err => { errors[err.path] = err.message; });
         return next(new ValidationError(errors, 'User creation failed database validation.'));
     }
+     if (error instanceof ValidationError) {
+        return next(error);
+     }
     next(error);
   }
 };

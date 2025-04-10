@@ -6,45 +6,68 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const OpenApiValidator = require('express-openapi-validator');
 const sequelize = require('./db');
-const { NotFoundError } = require('./error/errors');
+const { NotFoundError, UnauthorizedError } = require('./error/errors');
 const errorHandler = require('./error/errorHandler');
 const mainApiRouter = require('./routes');
+const authRoutes = require('./routes/auth.routes');
 
-// Инициализация приложения
+const requiredEnvDb = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST'];
+const missingEnvDb = requiredEnvDb.filter(key => !process.env[key]);
+if (missingEnvDb.length > 0) {
+  console.error(`❌ Missing required environment variables for database connection: ${missingEnvDb.join(', ')}`);
+  console.error("   Please ensure they are defined in your .env file or system environment.");
+  process.exit(1);
+}
+
+const requiredEnvApp = ['JWT_SECRET'];
+const missingEnvApp = requiredEnvApp.filter(key => !process.env[key]);
+if (missingEnvApp.length > 0) {
+  console.error(`❌ Missing required environment variables for application: ${missingEnvApp.join(', ')}`);
+  console.error("   Please ensure they are defined in your .env file or system environment.");
+  process.exit(1);
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Конфигурация Swagger
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'Events API',
       version: '1.0.0',
-      description: 'API for managing Users and Events',
+      description: 'API for managing Users and Events with Authentication',
     },
     servers: [
-      { 
-        url: `http://localhost:${PORT}`, 
-        description: 'Development server' 
+      {
+        url: `http://localhost:${PORT}`,
+        description: 'Development server'
       }
     ],
     components: {
+      securitySchemes: {
+        BearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'Enter JWT Bearer token **_only_**'
+        }
+      },
       schemas: {
         User: {
           type: 'object',
           properties: {
             id: { type: 'integer', readOnly: true, example: 1 },
             name: { type: 'string', example: 'Иван Иванов' },
-            email: { 
-              type: 'string', 
-              format: 'email', 
-              example: 'ivan@example.com' 
+            email: {
+              type: 'string',
+              format: 'email',
+              example: 'ivan@example.com'
             },
-            created_at: { 
-              type: 'string', 
-              format: 'date-time', 
-              readOnly: true 
+            created_at: {
+              type: 'string',
+              format: 'date-time',
+              readOnly: true
             }
           },
           required: ['name', 'email']
@@ -54,46 +77,55 @@ const swaggerOptions = {
           properties: {
             id: { type: 'integer', readOnly: true, example: 1 },
             title: { type: 'string', example: 'Classic music concert' },
-            description: { 
-              type: 'string', 
-              nullable: true, 
-              example: 'Event description' 
+            description: {
+              type: 'string',
+              nullable: true,
+              example: 'Event description'
             },
-            date: { 
-              type: 'string', 
-              format: 'date-time', 
-              example: '2024-10-26T20:00:00Z' 
+            date: {
+              type: 'string',
+              format: 'date-time',
+              example: '2024-10-26T20:00:00Z'
             },
-            category: { 
-              type: 'string', 
-              enum: ['concert', 'lecture', 'exhibition', 'master class', 'sport'], 
-              example: 'concert' 
+            category: {
+              type: 'string',
+              enum: ['concert', 'lecture', 'exhibition', 'master class', 'sport'],
+              example: 'concert'
             },
-            created_by: { 
-              type: 'integer', 
-              description: 'ID of the user who created', 
-              example: 1 
+            created_by: {
+              type: 'integer',
+              description: 'ID of the user who created (Read Only after creation)',
+              example: 1,
+              readOnly: true
             },
-            created_at: { 
-              type: 'string', 
-              format: 'date-time', 
-              readOnly: true 
-            }
+            created_at: {
+              type: 'string',
+              format: 'date-time',
+              readOnly: true
+            },
+             creator: {
+               type: 'object',
+               readOnly: true,
+               properties: {
+                 id: { type: 'integer' },
+                 name: { type: 'string'}
+               }
+             }
           },
-          required: ['title', 'date', 'category', 'created_by']
+          required: ['title', 'date', 'category']
         },
         ErrorResponse: {
           type: 'object',
           properties: {
-            message: { 
-              type: 'string', 
-              example: 'Detailed error message' 
+            message: {
+              type: 'string',
+              example: 'Detailed error message'
             },
             errors: {
               type: 'object',
-              additionalProperties: { 
-                type: 'string', 
-                example: 'Validation error description' 
+              additionalProperties: {
+                type: 'string',
+                example: 'Validation error description'
               },
               nullable: true
             }
@@ -101,61 +133,75 @@ const swaggerOptions = {
           required: ['message']
         }
       }
-    }
+    },
   },
   apis: ['./routes/*.routes.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-// Middleware
 app.use(morgan('dev'));
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Валидатор запросов на основе Swagger-спецификации
 app.use(
   OpenApiValidator.middleware({
     apiSpec: swaggerSpec,
     validateRequests: true,
     validateResponses: false,
-    ignorePaths: /\/api-docs/ // Игнорируем эндпоинт документации
+    ignorePaths: /\/api-docs|\/auth\/login/
   })
 );
 
-// Документация API
-app.use('/api-docs', 
-  swaggerUi.serve, 
+app.use('/api-docs',
+  swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
     explorer: true,
-    customSiteTitle: 'Events API Documentation'
+    customSiteTitle: 'Events API Documentation',
+    swaggerOptions: {
+        persistAuthorization: true,
+        securityDefinitions: {
+             BearerAuth: {
+                type: 'apiKey',
+                name: 'Authorization',
+                in: 'header',
+                description: 'Enter JWT token **_only_**, prefixed with "Bearer "'
+            }
+        },
+        security: [{ BearerAuth: [] }]
+    }
   })
 );
 
-// Обработчик ошибок валидации
 app.use((err, req, res, next) => {
-  if (err.status === 400) {
-    return res.status(400).json({
-      message: 'Validation failed',
-      errors: err.errors
-    });
+  if (err.status && err.errors) {
+     console.error("OpenAPI Validation Error:", err.errors);
+     return res.status(err.status).json({
+        message: err.message || 'Request validation failed',
+        errors: err.errors.map(e => ({
+            path: e.path,
+            message: e.message
+        }))
+     });
   }
+  if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+     console.error("JWT Error:", err.message);
+     return next(new UnauthorizedError(err.message));
+  }
+
   next(err);
 });
 
-// Маршруты API
+app.use('/auth', authRoutes);
 app.use('/', mainApiRouter);
 
-// Обработчик 404
 app.use((req, res, next) => {
   next(new NotFoundError(`Endpoint ${req.method} ${req.originalUrl} not found`));
 });
 
-// Финальный обработчик ошибок
 app.use(errorHandler);
 
-// Запуск сервера
 const startServer = async () => {
   try {
     await sequelize.authenticate();

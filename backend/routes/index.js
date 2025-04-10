@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.get('/', (req, res) => {
   res.json({
-    message: 'Events API Main Router. Use /users or /events endpoints.',
+    message: 'Events API Main Router. Use /users or /events endpoints. Use /auth for login.',
     timestamp: new Date().toISOString(),
   });
 });
