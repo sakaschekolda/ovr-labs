@@ -1,5 +1,3 @@
-// index.js
-
 require('dotenv').config();
 const express = require('express');
 const morgan = require('morgan');
@@ -52,7 +50,7 @@ const swaggerOptions = {
         { name: 'Authentication', description: 'User registration and login' },
         { name: 'Public Events', description: 'Publicly accessible event endpoints' },
         { name: 'Protected Events', description: 'Event management endpoints requiring authentication' },
-        { name: 'Users', description: 'User management endpoints (some protected)' }
+        { name: 'Users', description: 'User management endpoints (listing and role changes require Admin Role). User creation via /auth/register.' }
     ],
     components: {
       securitySchemes: {
@@ -73,6 +71,12 @@ const swaggerOptions = {
               type: 'string',
               format: 'email',
               example: 'ivan@example.com'
+            },
+            role: { // Добавим роль в схему для ответа
+              type: 'string',
+              enum: ['user', 'admin'],
+              readOnly: true,
+              example: 'user'
             },
             created_at: {
               type: 'string',
@@ -118,7 +122,8 @@ const swaggerOptions = {
                readOnly: true,
                properties: {
                  id: { type: 'integer' },
-                 name: { type: 'string'}
+                 name: { type: 'string'},
+                 role: { type: 'string', enum: ['user', 'admin'] } // Добавим роль создателя
                }
              }
           },
