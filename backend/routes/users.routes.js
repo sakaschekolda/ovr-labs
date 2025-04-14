@@ -1,9 +1,7 @@
-// routes/users.routes.js
-
 const express = require('express');
 const userController = require('../controllers/user.controller');
 const passport = require('passport');
-const { isAdmin } = require('../middleware/authz.middleware'); // Импорт middleware
+const { isAdmin } = require('../middleware/authz.middleware');
 
 const router = express.Router();
 
@@ -11,51 +9,8 @@ const router = express.Router();
  * @swagger
  * tags:
  *   name: Users
- *   description: User management endpoints
+ *   description: User management endpoints (Requires Admin Role)
  */
-
-/**
- * @swagger
- * /users:
- *   post:
- *     summary: Create a new user (Public / Registration)
- *     tags: [Users]
- *     description: Endpoint for user creation. Role defaults to 'user'. Prefer /auth/register.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [name, email]
- *             properties:
- *               name: { type: string }
- *               email: { type: string, format: email }
- *               password: { type: string, format: password }
- *     responses:
- *       201:
- *         description: User created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   $ref: '#/components/schemas/User'
- *       400:
- *         description: Validation Error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       500:
- *         description: Internal Server Error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-router.post('/', userController.createUser);
 
 /**
  * @swagger
@@ -97,10 +52,8 @@ router.post('/', userController.createUser);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-// Порядок: сначала аутентификация, потом проверка роли админа
 router.get('/', passport.authenticate('jwt', { session: false }), isAdmin, userController.getAllUsers);
 
-// --- Опциональный роут для смены роли ---
 /**
  * @swagger
  * /users/{id}/role:
@@ -174,7 +127,6 @@ router.get('/', passport.authenticate('jwt', { session: false }), isAdmin, userC
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-// Порядок: сначала аутентификация, потом проверка роли админа
 router.patch('/:id/role', passport.authenticate('jwt', { session: false }), isAdmin, userController.changeUserRole);
 
 
