@@ -7,7 +7,9 @@ const authenticateToken = async (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (token == null) {
-    return next(new UnauthorizedError('No authentication token provided. Access denied.'));
+    return next(
+      new UnauthorizedError('No authentication token provided. Access denied.'),
+    );
   }
 
   try {
@@ -21,12 +23,17 @@ const authenticateToken = async (req, res, next) => {
 
     req.user = user;
     next();
-
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
-         return next(new UnauthorizedError('Authentication token has expired. Please log in again.'));
+      return next(
+        new UnauthorizedError(
+          'Authentication token has expired. Please log in again.',
+        ),
+      );
     }
-    return next(new UnauthorizedError('Invalid authentication token. Access denied.'));
+    return next(
+      new UnauthorizedError('Invalid authentication token. Access denied.'),
+    );
   }
 };
 

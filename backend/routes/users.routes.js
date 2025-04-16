@@ -52,7 +52,12 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/', passport.authenticate('jwt', { session: false }), isAdmin, userController.getAllUsers);
+router.get(
+  '/',
+  passport.authenticate('jwt', { session: false }),
+  isAdmin,
+  userController.getAllUsers,
+);
 
 /**
  * @swagger
@@ -127,7 +132,11 @@ router.get('/', passport.authenticate('jwt', { session: false }), isAdmin, userC
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.patch('/:id/role', passport.authenticate('jwt', { session: false }), isAdmin, userController.changeUserRole);
-
+router.patch(
+  '/:id/role',
+  passport.authenticate('jwt', { session: false }),
+  isAdmin,
+  userController.changeUserRole,
+);
 
 module.exports = router;

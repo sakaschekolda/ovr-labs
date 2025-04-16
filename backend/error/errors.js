@@ -38,12 +38,13 @@ class UnauthorizedError extends ApiError {
 }
 
 class ForbiddenError extends ApiError {
-    constructor(message = 'Permission denied. You do not have rights to access or modify this resource.') {
-        super(403, message);
-        this.name = 'ForbiddenError';
-    }
+  constructor(
+    message = 'Permission denied. You do not have rights to access or modify this resource.',
+  ) {
+    super(403, message);
+    this.name = 'ForbiddenError';
+  }
 }
-
 
 module.exports = {
   BaseError,
@@ -51,5 +52,5 @@ module.exports = {
   ValidationError,
   NotFoundError,
   UnauthorizedError,
-  ForbiddenError
+  ForbiddenError,
 };

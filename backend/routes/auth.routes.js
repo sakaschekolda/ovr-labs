@@ -1,7 +1,11 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { ApiError, ValidationError, UnauthorizedError } = require('../error/errors');
+const {
+  ApiError,
+  ValidationError,
+  UnauthorizedError,
+} = require('../error/errors');
 const authController = require('../controllers/auth.controller');
 
 const router = express.Router();
@@ -89,45 +93,60 @@ router.post('/register', async (req, res, next) => {
     if (!email) {
       validationErrors.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-       validationErrors.email = 'Invalid email format';
+      validationErrors.email = 'Invalid email format';
     }
-     if (!password) validationErrors.password = 'Password is required';
+    if (!password) validationErrors.password = 'Password is required';
 
     if (Object.keys(validationErrors).length > 0) {
-        throw new ValidationError(validationErrors, 'User registration failed validation.');
+      throw new ValidationError(
+        validationErrors,
+        'User registration failed validation.',
+      );
     }
 
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      throw new ValidationError({ email: 'Email address is already in use.' }, 'User registration failed.');
+      throw new ValidationError(
+        { email: 'Email address is already in use.' },
+        'User registration failed.',
+      );
     }
 
     const user = await User.create({ name, email, password });
 
     const userData = {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        created_at: user.created_at
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      created_at: user.created_at,
     };
 
     res.status(201).json({
       message: 'User registered successfully.',
-      user: userData
+      user: userData,
     });
   } catch (error) {
     if (error instanceof ValidationError) {
-        return next(error);
+      return next(error);
     }
-    if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
-        const errors = {};
-        error.errors.forEach(err => { errors[err.path] = err.message; });
-        return next(new ValidationError(errors, 'User registration failed database validation.'));
+    if (
+      error.name === 'SequelizeValidationError' ||
+      error.name === 'SequelizeUniqueConstraintError'
+    ) {
+      const errors = {};
+      error.errors.forEach((err) => {
+        errors[err.path] = err.message;
+      });
+      return next(
+        new ValidationError(
+          errors,
+          'User registration failed database validation.',
+        ),
+      );
     }
     next(error);
   }
 });
-
 
 /**
  * @swagger
@@ -197,6 +216,5 @@ router.post('/register', async (req, res, next) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/login', authController.login);
-
 
 module.exports = router;

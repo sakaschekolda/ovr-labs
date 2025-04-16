@@ -9,10 +9,10 @@ router.use('/events', eventRoutes);
 
 router.get('/', (req, res) => {
   res.json({
-    message: 'API Main Protected Router. Contains /users and /events endpoints.',
+    message:
+      'API Main Protected Router. Contains /users and /events endpoints.',
     timestamp: new Date().toISOString(),
   });
 });
-
 
 module.exports = router;

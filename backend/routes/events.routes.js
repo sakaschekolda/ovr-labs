@@ -62,8 +62,11 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/', passport.authenticate('jwt', { session: false }), eventController.createEvent);
-
+router.post(
+  '/',
+  passport.authenticate('jwt', { session: false }),
+  eventController.createEvent,
+);
 
 /**
  * @swagger
@@ -132,8 +135,11 @@ router.post('/', passport.authenticate('jwt', { session: false }), eventControll
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.put('/:id', passport.authenticate('jwt', { session: false }), eventController.updateEvent);
-
+router.put(
+  '/:id',
+  passport.authenticate('jwt', { session: false }),
+  eventController.updateEvent,
+);
 
 /**
  * @swagger
@@ -183,6 +189,10 @@ router.put('/:id', passport.authenticate('jwt', { session: false }), eventContro
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete('/:id', passport.authenticate('jwt', { session: false }), eventController.deleteEvent);
+router.delete(
+  '/:id',
+  passport.authenticate('jwt', { session: false }),
+  eventController.deleteEvent,
+);
 
 module.exports = router;

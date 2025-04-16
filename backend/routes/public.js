@@ -2,7 +2,6 @@ const express = require('express');
 const eventController = require('../controllers/event.controller');
 const router = express.Router();
 
-
 /**
  * @swagger
  * tags:
@@ -127,6 +126,5 @@ router.get('/events/categories', eventController.getEventCategories);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/events/:id', eventController.getEventById);
-
 
 module.exports = router;
