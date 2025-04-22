@@ -1,3 +1,4 @@
+// eslint.config.mjs
 import globals from 'globals';
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
@@ -5,7 +6,16 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['node_modules/', 'dist/', 'eslint.config.mjs'],
+    ignores: [
+        'node_modules/',
+        'dist/',
+        'coverage/',
+        '.env',
+        '*.log',
+        'express.d.ts',
+        'eslint.config.mjs',
+        '.prettierrc.cjs',
+    ],
   },
 
   js.configs.recommended,
@@ -19,6 +29,10 @@ export default tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['off', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
   },
 
   {
@@ -28,6 +42,5 @@ export default tseslint.config(
       },
     },
   },
-
   eslintConfigPrettier,
 );

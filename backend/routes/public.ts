@@ -1,6 +1,8 @@
-const express = require('express');
-const eventController = require('../controllers/event.controller');
-const router = express.Router();
+import express, { Router } from 'express';
+import * as eventController from '../controllers/event.controller.js';
+import { handleAsync } from '../utils/asyncHandler.js';
+
+const router: Router = express.Router();
 
 /**
  * @swagger
@@ -50,7 +52,7 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/events', eventController.getAllEvents);
+router.get('/events', handleAsync(eventController.getAllEvents));
 
 /**
  * @swagger
@@ -125,6 +127,6 @@ router.get('/events/categories', eventController.getEventCategories);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/events/:id', eventController.getEventById);
+router.get('/events/:id', handleAsync(eventController.getEventById));
 
-module.exports = router;
+export default router;

@@ -1,14 +1,31 @@
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const {
-  ApiError,
-  ValidationError,
-  UnauthorizedError,
-} = require('../error/errors');
-const authController = require('../controllers/auth.controller');
+import express, { Router, Request, Response, NextFunction } from 'express';
+import User, { UserRole } from '../models/User.js';
+import { ValidationError } from '../error/errors.js';
+import { login } from '../controllers/auth.controller.js';
+import passport from '../config/passport.js';
 
-const router = express.Router();
+const router: Router = express.Router();
+
+interface RegisterRequestBody {
+    name?: string;
+    email?: string;
+    password?: string;
+}
+
+interface RegisterResponseBody {
+    message: string;
+    user: {
+        id: number;
+        name: string;
+        email: string;
+        role: UserRole;
+        created_at: Date;
+    };
+}
+
+interface SequelizeError extends Error {
+    errors?: Array<{ path?: string | null; message: string }>;
+}
 
 /**
  * @swagger
@@ -23,7 +40,7 @@ const router = express.Router();
  *   post:
  *     summary: Register a new user
  *     tags: [Authentication]
- *     description: Creates a new user account with email, name, and password.
+ *     description: Creates a new user account with email, name, and password. Role defaults to 'user'.
  *     requestBody:
  *       required: true
  *       content:
@@ -66,17 +83,6 @@ const router = express.Router();
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *             examples:
- *               missingField:
- *                 value:
- *                   message: "Validation failed."
- *                   errors:
- *                     email: "Email is required"
- *               duplicateEmail:
- *                 value:
- *                   message: "Validation failed."
- *                   errors:
- *                     email: "Email address is already in use."
  *       500:
  *         description: Internal Server Error during registration process.
  *         content:
@@ -84,11 +90,17 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/register', async (req, res, next) => {
+
+const handleAsync = (fn: (req: Request, res: Response, next: NextFunction) => Promise<void>) => 
+  (req: Request, res: Response, next: NextFunction): void => {
+    fn(req, res, next).catch(next);
+  };
+
+router.post('/register', handleAsync(async (req: Request<object, RegisterResponseBody, RegisterRequestBody>, res: Response<RegisterResponseBody>, next: NextFunction): Promise<void> => {
   try {
     const { name, email, password } = req.body;
 
-    const validationErrors = {};
+    const validationErrors: Record<string, string> = {};
     if (!name) validationErrors.name = 'Name is required';
     if (!email) {
       validationErrors.email = 'Email is required';
@@ -104,7 +116,7 @@ router.post('/register', async (req, res, next) => {
       );
     }
 
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser: User | null = await User.findOne({ where: { email } });
     if (existingUser) {
       throw new ValidationError(
         { email: 'Email address is already in use.' },
@@ -112,41 +124,52 @@ router.post('/register', async (req, res, next) => {
       );
     }
 
-    const user = await User.create({ name, email, password });
+    const user: User = await User.create({
+      name: name!,
+      email: email!,
+      password: password!,
+      role: 'user'
+    });
+  
+    const userRole: UserRole = user.getDataValue('role');
+    const createdAt: Date = user.getDataValue('created_at');
 
-    const userData = {
+    const createdUserData = {
       id: user.id,
       name: user.name,
       email: user.email,
-      created_at: user.created_at,
+      role: userRole,
+      created_at: createdAt,
     };
 
     res.status(201).json({
       message: 'User registered successfully.',
-      user: userData,
+      user: createdUserData,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof ValidationError) {
-      return next(error);
+      next(error);
+      return;
     }
-    if (
-      error.name === 'SequelizeValidationError' ||
-      error.name === 'SequelizeUniqueConstraintError'
-    ) {
-      const errors = {};
-      error.errors.forEach((err) => {
-        errors[err.path] = err.message;
-      });
-      return next(
-        new ValidationError(
-          errors,
-          'User registration failed database validation.',
-        ),
-      );
+    if (error instanceof Error && (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError')) {
+      const errors: Record<string, string> = {};
+      const sequelizeError = error as SequelizeError;
+      if (sequelizeError.errors && Array.isArray(sequelizeError.errors)) {
+        sequelizeError.errors.forEach((err) => {
+          if (err.path) {
+            errors[err.path] = err.message;
+          }
+        });
+      }
+      const message = error.name === 'SequelizeUniqueConstraintError' 
+        ? 'Database constraint violation.' 
+        : 'User registration failed database validation.';
+      next(new ValidationError(errors, message));
+      return;
     }
     next(error);
   }
-});
+}));
 
 /**
  * @swagger
@@ -196,18 +219,12 @@ router.post('/register', async (req, res, next) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               message: "Validation failed."
- *               errors:
- *                 credentials: "Email and password are required."
  *       401:
  *         description: Authentication failed - Invalid credentials.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               message: "Invalid email or password."
  *       500:
  *         description: Internal Server Error during login process.
  *         content:
@@ -215,6 +232,6 @@ router.post('/register', async (req, res, next) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/login', authController.login);
+router.post('/login', handleAsync(login));
 
-module.exports = router;
+export default router;

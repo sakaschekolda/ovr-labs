@@ -6,11 +6,9 @@ module.exports = {
   singleQuote: true,
   quoteProps: 'as-needed',
   jsxSingleQuote: false,
-  trailingComma: 'es5',
+  trailingComma: 'all',
   bracketSpacing: true,
   bracketSameLine: false,
   arrowParens: 'always',
-  trailingComma: 'all',
-
   endOfLine: 'lf',
 };
