@@ -7,24 +7,24 @@ import passport from '../config/passport.js';
 const router: Router = express.Router();
 
 interface RegisterRequestBody {
-    name?: string;
-    email?: string;
-    password?: string;
+  name?: string;
+  email?: string;
+  password?: string;
 }
 
 interface RegisterResponseBody {
-    message: string;
-    user: {
-        id: number;
-        name: string;
-        email: string;
-        role: UserRole;
-        created_at: Date;
-    };
+  message: string;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    role: UserRole;
+    created_at: Date;
+  };
 }
 
 interface SequelizeError extends Error {
-    errors?: Array<{ path?: string | null; message: string }>;
+  errors?: Array<{ path?: string | null; message: string }>;
 }
 
 /**
@@ -91,85 +91,102 @@ interface SequelizeError extends Error {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 
-const handleAsync = (fn: (req: Request, res: Response, next: NextFunction) => Promise<void>) => 
+const handleAsync =
+  (fn: (req: Request, res: Response, next: NextFunction) => Promise<void>) =>
   (req: Request, res: Response, next: NextFunction): void => {
     fn(req, res, next).catch(next);
   };
 
-router.post('/register', handleAsync(async (req: Request<object, RegisterResponseBody, RegisterRequestBody>, res: Response<RegisterResponseBody>, next: NextFunction): Promise<void> => {
-  try {
-    const { name, email, password } = req.body;
+router.post(
+  '/register',
+  handleAsync(
+    async (
+      req: Request<object, RegisterResponseBody, RegisterRequestBody>,
+      res: Response<RegisterResponseBody>,
+      next: NextFunction,
+    ): Promise<void> => {
+      try {
+        const { name, email, password } = req.body;
 
-    const validationErrors: Record<string, string> = {};
-    if (!name) validationErrors.name = 'Name is required';
-    if (!email) {
-      validationErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      validationErrors.email = 'Invalid email format';
-    }
-    if (!password) validationErrors.password = 'Password is required';
+        const validationErrors: Record<string, string> = {};
+        if (!name) validationErrors.name = 'Name is required';
+        if (!email) {
+          validationErrors.email = 'Email is required';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          validationErrors.email = 'Invalid email format';
+        }
+        if (!password) validationErrors.password = 'Password is required';
 
-    if (Object.keys(validationErrors).length > 0) {
-      throw new ValidationError(
-        validationErrors,
-        'User registration failed validation.',
-      );
-    }
+        if (Object.keys(validationErrors).length > 0) {
+          throw new ValidationError(
+            validationErrors,
+            'User registration failed validation.',
+          );
+        }
 
-    const existingUser: User | null = await User.findOne({ where: { email } });
-    if (existingUser) {
-      throw new ValidationError(
-        { email: 'Email address is already in use.' },
-        'User registration failed.',
-      );
-    }
-
-    const user: User = await User.create({
-      name: name!,
-      email: email!,
-      password: password!,
-      role: 'user'
-    });
-  
-    const userRole: UserRole = user.getDataValue('role');
-    const createdAt: Date = user.getDataValue('created_at');
-
-    const createdUserData = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: userRole,
-      created_at: createdAt,
-    };
-
-    res.status(201).json({
-      message: 'User registered successfully.',
-      user: createdUserData,
-    });
-  } catch (error: unknown) {
-    if (error instanceof ValidationError) {
-      next(error);
-      return;
-    }
-    if (error instanceof Error && (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError')) {
-      const errors: Record<string, string> = {};
-      const sequelizeError = error as SequelizeError;
-      if (sequelizeError.errors && Array.isArray(sequelizeError.errors)) {
-        sequelizeError.errors.forEach((err) => {
-          if (err.path) {
-            errors[err.path] = err.message;
-          }
+        const existingUser: User | null = await User.findOne({
+          where: { email },
         });
+        if (existingUser) {
+          throw new ValidationError(
+            { email: 'Email address is already in use.' },
+            'User registration failed.',
+          );
+        }
+
+        const user: User = await User.create({
+          name: name!,
+          email: email!,
+          password: password!,
+          role: 'user',
+        });
+
+        const userRole: UserRole = user.getDataValue('role');
+        const createdAt: Date = user.getDataValue('created_at');
+
+        const createdUserData = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: userRole,
+          created_at: createdAt,
+        };
+
+        res.status(201).json({
+          message: 'User registered successfully.',
+          user: createdUserData,
+        });
+      } catch (error: unknown) {
+        if (error instanceof ValidationError) {
+          next(error);
+          return;
+        }
+        if (
+          error instanceof Error &&
+          (error.name === 'SequelizeValidationError' ||
+            error.name === 'SequelizeUniqueConstraintError')
+        ) {
+          const errors: Record<string, string> = {};
+          const sequelizeError = error as SequelizeError;
+          if (sequelizeError.errors && Array.isArray(sequelizeError.errors)) {
+            sequelizeError.errors.forEach((err) => {
+              if (err.path) {
+                errors[err.path] = err.message;
+              }
+            });
+          }
+          const message =
+            error.name === 'SequelizeUniqueConstraintError'
+              ? 'Database constraint violation.'
+              : 'User registration failed database validation.';
+          next(new ValidationError(errors, message));
+          return;
+        }
+        next(error);
       }
-      const message = error.name === 'SequelizeUniqueConstraintError' 
-        ? 'Database constraint violation.' 
-        : 'User registration failed database validation.';
-      next(new ValidationError(errors, message));
-      return;
-    }
-    next(error);
-  }
-}));
+    },
+  ),
+);
 
 /**
  * @swagger

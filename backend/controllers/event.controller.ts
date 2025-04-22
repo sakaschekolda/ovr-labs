@@ -1,5 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
-import { WhereOptions, FindOptions, Order, CreationOptional, ForeignKey, Optional, InferAttributes, InferCreationAttributes } from 'sequelize';
+import {
+  WhereOptions,
+  FindOptions,
+  Order,
+  CreationOptional,
+  ForeignKey,
+  Optional,
+  InferAttributes,
+  InferCreationAttributes,
+} from 'sequelize';
 import Event, { EventCategory } from '../models/Event.js';
 import User from '../models/User.js';
 import {
@@ -11,39 +20,43 @@ import {
 import 'dotenv/config';
 
 interface SequelizeError extends Error {
-    errors?: Array<{ path?: string | null; message: string }>;
+  errors?: Array<{ path?: string | null; message: string }>;
 }
 
 interface GetAllEventsQuery {
-    category?: EventCategory;
+  category?: EventCategory;
 }
 
 interface CreateEventRequestBody {
-    title: string;
-    description?: string | null;
-    date: string;
-    category: EventCategory;
+  title: string;
+  description?: string | null;
+  date: string;
+  category: EventCategory;
 }
 
 interface UpdateEventRequestBody {
-    title?: string;
-    description?: string | null;
-    date?: string;
-    category?: EventCategory;
+  title?: string;
+  description?: string | null;
+  date?: string;
+  category?: EventCategory;
 }
 
-type EventUpdateData = Partial<Pick<Event, 'title' | 'description' | 'date' | 'category'>>;
+type EventUpdateData = Partial<
+  Pick<Event, 'title' | 'description' | 'date' | 'category'>
+>;
 
-interface ModifyEventParams { id: string; }
+interface ModifyEventParams {
+  id: string;
+}
 
 type EventCreationAttributes = {
-    title: string;
-    description: CreationOptional<string | null>;
-    date: Date;
-    created_by: ForeignKey<User['id']>;
-    category: EventCategory;
-    id: CreationOptional<number>;
-    created_at: CreationOptional<Date>;
+  title: string;
+  description: CreationOptional<string | null>;
+  date: Date;
+  created_by: ForeignKey<User['id']>;
+  category: EventCategory;
+  id: CreationOptional<number>;
+  created_at: CreationOptional<Date>;
 };
 
 const VALID_CATEGORIES: EventCategory[] = [
@@ -54,7 +67,11 @@ const VALID_CATEGORIES: EventCategory[] = [
   'sport',
 ];
 
-export const getAllEvents = async (req: Request<object, unknown, object, GetAllEventsQuery>, res: Response, next: NextFunction): Promise<void> => {
+export const getAllEvents = async (
+  req: Request<object, unknown, object, GetAllEventsQuery>,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
   try {
     const { category } = req.query;
     const where: WhereOptions<Event> = {};
@@ -71,11 +88,11 @@ export const getAllEvents = async (req: Request<object, unknown, object, GetAllE
     const orderOption: Order = [['date', 'ASC']];
 
     const findOptions: FindOptions<Event> = {
-        where,
-        include: [
-            { model: User, as: 'creator', attributes: ['id', 'name', 'role'] }
-        ],
-        order: orderOption
+      where,
+      include: [
+        { model: User, as: 'creator', attributes: ['id', 'name', 'role'] },
+      ],
+      order: orderOption,
     };
 
     const events: Event[] = await Event.findAll(findOptions);
@@ -89,7 +106,11 @@ export const getAllEvents = async (req: Request<object, unknown, object, GetAllE
   }
 };
 
-export const getEventCategories = (req: Request, res: Response, next: NextFunction): void => {
+export const getEventCategories = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void => {
   try {
     res.status(200).json({
       data: {
@@ -101,11 +122,18 @@ export const getEventCategories = (req: Request, res: Response, next: NextFuncti
   }
 };
 
-export const getEventById = async (req: Request<ModifyEventParams>, res: Response, next: NextFunction): Promise<void> => {
+export const getEventById = async (
+  req: Request<ModifyEventParams>,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
   try {
     const eventIdString = req.params.id;
     if (eventIdString === undefined) {
-        throw new ApiError(400, 'Event ID parameter is missing in the request URL.');
+      throw new ApiError(
+        400,
+        'Event ID parameter is missing in the request URL.',
+      );
     }
     const eventId = parseInt(eventIdString, 10);
 
@@ -129,7 +157,11 @@ export const getEventById = async (req: Request<ModifyEventParams>, res: Respons
   }
 };
 
-export const createEvent = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const createEvent = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
   try {
     const authenticatedUser = req.user;
 
@@ -140,7 +172,12 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
     }
 
     const created_by = authenticatedUser.id;
-    const { title, description, date: dateString, category } = req.body as CreateEventRequestBody;
+    const {
+      title,
+      description,
+      date: dateString,
+      category,
+    } = req.body as CreateEventRequestBody;
 
     const validationErrors: Record<string, string> = {};
     let validatedDate: Date | null = null;
@@ -150,22 +187,27 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
     if (!dateString) {
       validationErrors.date = 'Date is required';
     } else {
-        const parsedDate = new Date(dateString);
-        if (isNaN(parsedDate.getTime())) {
-            validationErrors.date = 'Invalid date format provided.';
-        } else if (parsedDate <= new Date()) {
-            validationErrors.date = 'Event date must be in the future.';
-        } else {
-            validatedDate = parsedDate;
-        }
+      const parsedDate = new Date(dateString);
+      if (isNaN(parsedDate.getTime())) {
+        validationErrors.date = 'Invalid date format provided.';
+      } else if (parsedDate <= new Date()) {
+        validationErrors.date = 'Event date must be in the future.';
+      } else {
+        validatedDate = parsedDate;
+      }
     }
     if (!category) {
       validationErrors.category = 'Category is required';
     } else if (!VALID_CATEGORIES.includes(category)) {
       validationErrors.category = `Invalid category selected. Must be one of: ${VALID_CATEGORIES.join(', ')}`;
     }
-    if (description != null && typeof description === 'string' && description.length > 2000) {
-      validationErrors.description = 'Description cannot exceed 2000 characters.';
+    if (
+      description != null &&
+      typeof description === 'string' &&
+      description.length > 2000
+    ) {
+      validationErrors.description =
+        'Description cannot exceed 2000 characters.';
     }
 
     if (Object.keys(validationErrors).length > 0) {
@@ -176,40 +218,45 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
     }
 
     const event = await Event.create({
-        title,
-        description: description ?? null,
-        date: validatedDate!,
-        created_by,
-        category,
+      title,
+      description: description ?? null,
+      date: validatedDate!,
+      created_by,
+      category,
     });
 
-    const createdEventWithCreator: Event | null = await Event.findByPk(event.id, {
-      include: [
-        { model: User, as: 'creator', attributes: ['id', 'name', 'role'] },
-      ],
-    });
+    const createdEventWithCreator: Event | null = await Event.findByPk(
+      event.id,
+      {
+        include: [
+          { model: User, as: 'creator', attributes: ['id', 'name', 'role'] },
+        ],
+      },
+    );
 
     res.status(201).json({ data: createdEventWithCreator ?? event });
-
   } catch (error: unknown) {
-     if (error instanceof Error && error.name === 'SequelizeValidationError') {
-        const errors: Record<string, string> = {};
-        const sequelizeError = error as SequelizeError;
-        if (sequelizeError.errors && Array.isArray(sequelizeError.errors)) {
-            sequelizeError.errors.forEach((err) => {
-            if (err.path) {
-                errors[err.path] = err.message;
-            }
-            });
-        }
-        return next(
-            new ValidationError(
-            errors,
-            'Event creation failed database validation.',
-            ),
-        );
+    if (error instanceof Error && error.name === 'SequelizeValidationError') {
+      const errors: Record<string, string> = {};
+      const sequelizeError = error as SequelizeError;
+      if (sequelizeError.errors && Array.isArray(sequelizeError.errors)) {
+        sequelizeError.errors.forEach((err) => {
+          if (err.path) {
+            errors[err.path] = err.message;
+          }
+        });
+      }
+      return next(
+        new ValidationError(
+          errors,
+          'Event creation failed database validation.',
+        ),
+      );
     }
-     if (error instanceof Error && error.name === 'SequelizeForeignKeyConstraintError') {
+    if (
+      error instanceof Error &&
+      error.name === 'SequelizeForeignKeyConstraintError'
+    ) {
       return next(
         new ValidationError(
           { created_by: `Invalid user specified. User may not exist.` },
@@ -221,7 +268,11 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-export const updateEvent = async (req: Request<ModifyEventParams, unknown, UpdateEventRequestBody>, res: Response, next: NextFunction): Promise<void> => {
+export const updateEvent = async (
+  req: Request<ModifyEventParams, unknown, UpdateEventRequestBody>,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
   try {
     const authenticatedUser = req.user;
 
@@ -233,7 +284,10 @@ export const updateEvent = async (req: Request<ModifyEventParams, unknown, Updat
 
     const eventIdString = req.params.id;
     if (eventIdString === undefined) {
-        throw new ApiError(400, 'Event ID parameter is missing in the request URL.');
+      throw new ApiError(
+        400,
+        'Event ID parameter is missing in the request URL.',
+      );
     }
     const eventId = parseInt(eventIdString, 10);
     const userId = authenticatedUser.id;
@@ -241,11 +295,13 @@ export const updateEvent = async (req: Request<ModifyEventParams, unknown, Updat
     const { title, description, date: dateString, category } = req.body;
     if ('id' in req.body || 'created_by' in req.body) {
       throw new ValidationError(
-        { general: 'Cannot modify event ID or creator (created_by) field via request body.' },
+        {
+          general:
+            'Cannot modify event ID or creator (created_by) field via request body.',
+        },
         'Invalid update request.',
       );
     }
-
 
     if (isNaN(eventId)) {
       throw new ValidationError({ id: 'Event ID must be a valid integer' });
@@ -257,30 +313,35 @@ export const updateEvent = async (req: Request<ModifyEventParams, unknown, Updat
 
     if (title !== undefined) {
       if (typeof title !== 'string' || title.length < 3 || title.length > 100) {
-        validationErrors.title = 'Event title must be between 3 and 100 characters.';
+        validationErrors.title =
+          'Event title must be between 3 and 100 characters.';
       } else {
         updateData.title = title;
         hasUpdate = true;
       }
     }
     if (description !== undefined) {
-      if (description !== null && (typeof description !== 'string' || description.length > 2000)) {
-        validationErrors.description = 'Description cannot exceed 2000 characters.';
+      if (
+        description !== null &&
+        (typeof description !== 'string' || description.length > 2000)
+      ) {
+        validationErrors.description =
+          'Description cannot exceed 2000 characters.';
       } else {
         updateData.description = description;
         hasUpdate = true;
       }
     }
     if (dateString !== undefined) {
-        const parsedDate = new Date(dateString);
-        if (isNaN(parsedDate.getTime())) {
-            validationErrors.date = 'Invalid date format provided.';
-        } else if (parsedDate <= new Date()) {
-            validationErrors.date = 'Event date must be in the future.';
-        } else {
-            updateData.date = parsedDate;
-            hasUpdate = true;
-        }
+      const parsedDate = new Date(dateString);
+      if (isNaN(parsedDate.getTime())) {
+        validationErrors.date = 'Invalid date format provided.';
+      } else if (parsedDate <= new Date()) {
+        validationErrors.date = 'Event date must be in the future.';
+      } else {
+        updateData.date = parsedDate;
+        hasUpdate = true;
+      }
     }
     if (category !== undefined) {
       if (!VALID_CATEGORIES.includes(category)) {
@@ -297,18 +358,24 @@ export const updateEvent = async (req: Request<ModifyEventParams, unknown, Updat
         'Event update failed validation.',
       );
     }
-     if (!hasUpdate) {
-         if (Object.keys(req.body).length > 0) {
-            throw new ValidationError(
-                { general: 'No valid fields provided for update or invalid fields were sent.' },
-                'Invalid update request.'
-            );
-         } else {
-            throw new ValidationError(
-              { general: 'Request body is empty. Provide at least one field to update (title, description, date, category).' },
-              'Invalid update request.'
-            );
-          }
+    if (!hasUpdate) {
+      if (Object.keys(req.body).length > 0) {
+        throw new ValidationError(
+          {
+            general:
+              'No valid fields provided for update or invalid fields were sent.',
+          },
+          'Invalid update request.',
+        );
+      } else {
+        throw new ValidationError(
+          {
+            general:
+              'Request body is empty. Provide at least one field to update (title, description, date, category).',
+          },
+          'Invalid update request.',
+        );
+      }
     }
 
     const existingEvent: Event | null = await Event.findByPk(eventId);
@@ -318,7 +385,9 @@ export const updateEvent = async (req: Request<ModifyEventParams, unknown, Updat
 
     const eventCreatorId = existingEvent.getDataValue('created_by');
     if (typeof eventCreatorId !== 'number' || eventCreatorId !== userId) {
-           throw new ForbiddenError('You do not have permission to update this event.');
+      throw new ForbiddenError(
+        'You do not have permission to update this event.',
+      );
     }
 
     await existingEvent.update(updateData);
@@ -331,25 +400,29 @@ export const updateEvent = async (req: Request<ModifyEventParams, unknown, Updat
 
     res.status(200).json({ data: updatedEvent });
   } catch (error: unknown) {
-     if (error instanceof Error && error.name === 'SequelizeValidationError') {
-        const errors: Record<string, string> = {};
-        const sequelizeError = error as SequelizeError;
-         if (sequelizeError.errors && Array.isArray(sequelizeError.errors)) {
-          sequelizeError.errors.forEach((err) => {
-            if (err.path) {
-              errors[err.path] = err.message;
-            }
-          });
-         }
-        return next(
-          new ValidationError(errors, 'Event update failed database validation.'),
-        );
+    if (error instanceof Error && error.name === 'SequelizeValidationError') {
+      const errors: Record<string, string> = {};
+      const sequelizeError = error as SequelizeError;
+      if (sequelizeError.errors && Array.isArray(sequelizeError.errors)) {
+        sequelizeError.errors.forEach((err) => {
+          if (err.path) {
+            errors[err.path] = err.message;
+          }
+        });
       }
+      return next(
+        new ValidationError(errors, 'Event update failed database validation.'),
+      );
+    }
     next(error);
   }
 };
 
-export const deleteEvent = async (req: Request<ModifyEventParams>, res: Response, next: NextFunction): Promise<void> => {
+export const deleteEvent = async (
+  req: Request<ModifyEventParams>,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
   try {
     const authenticatedUser = req.user;
 
@@ -361,7 +434,10 @@ export const deleteEvent = async (req: Request<ModifyEventParams>, res: Response
 
     const eventIdString = req.params.id;
     if (eventIdString === undefined) {
-        throw new ApiError(400, 'Event ID parameter is missing in the request URL.');
+      throw new ApiError(
+        400,
+        'Event ID parameter is missing in the request URL.',
+      );
     }
     const eventId = parseInt(eventIdString, 10);
     const userId = authenticatedUser.id;
@@ -378,7 +454,9 @@ export const deleteEvent = async (req: Request<ModifyEventParams>, res: Response
 
     const eventCreatorId = eventToDelete.getDataValue('created_by');
     if (typeof eventCreatorId !== 'number' || eventCreatorId !== userId) {
-           throw new ForbiddenError('You do not have permission to delete this event.');
+      throw new ForbiddenError(
+        'You do not have permission to delete this event.',
+      );
     }
 
     const deletedCount: number = await Event.destroy({

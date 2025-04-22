@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { ForbiddenError } from '../error/errors.js';
 
-export const isAdmin = (req: Request, res: Response, next: NextFunction): void => {
+export const isAdmin = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void => {
   if (!req.user) {
     return next(
       new ForbiddenError(

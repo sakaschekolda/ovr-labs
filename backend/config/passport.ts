@@ -1,5 +1,10 @@
 import passport from 'passport';
-import { Strategy as JwtStrategy, ExtractJwt, StrategyOptions, VerifiedCallback } from 'passport-jwt';
+import {
+  Strategy as JwtStrategy,
+  ExtractJwt,
+  StrategyOptions,
+  VerifiedCallback,
+} from 'passport-jwt';
 import User from '../models/User.js';
 import 'dotenv/config';
 
@@ -20,25 +25,31 @@ const options: StrategyOptions = {
 };
 
 passport.use(
-  new JwtStrategy(options, (jwt_payload: AppJwtPayload, done: VerifiedCallback) => {
-    void (async () => {
-      try {
-        const user: User | null = await User.findByPk(jwt_payload.id);
+  new JwtStrategy(
+    options,
+    (jwt_payload: AppJwtPayload, done: VerifiedCallback) => {
+      void (async () => {
+        try {
+          const user: User | null = await User.findByPk(jwt_payload.id);
 
-        if (user) {
-          done(null, user);
-        } else {
-          done(null, false);
+          if (user) {
+            done(null, user);
+          } else {
+            done(null, false);
+          }
+        } catch (error: unknown) {
+          if (error instanceof Error) {
+            done(error, false);
+          } else {
+            done(
+              new Error('An unknown error occurred during JWT verification'),
+              false,
+            );
+          }
         }
-      } catch (error: unknown) {
-        if (error instanceof Error) {
-          done(error, false);
-        } else {
-            done(new Error('An unknown error occurred during JWT verification'), false);
-        }
-      }
-    })();
-  }),
+      })();
+    },
+  ),
 );
 
 export default passport;

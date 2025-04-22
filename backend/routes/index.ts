@@ -10,8 +10,8 @@ router.use('/users', userRoutes);
 router.use('/events', eventRoutes);
 
 interface RootResponse {
-    message: string;
-    timestamp: string;
+  message: string;
+  timestamp: string;
 }
 
 router.get('/', (req: Request, res: Response<RootResponse>) => {

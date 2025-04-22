@@ -13,7 +13,12 @@ import mainApiRouter from './routes/index.js';
 import authRoutes from './routes/auth.routes.js';
 import publicRoutes from './routes/public.js';
 
-const requiredEnvDb: string[] = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST'];
+const requiredEnvDb: string[] = [
+  'DB_NAME',
+  'DB_USER',
+  'DB_PASSWORD',
+  'DB_HOST',
+];
 const missingEnvDb: string[] = requiredEnvDb.filter((key) => !process.env[key]);
 if (missingEnvDb.length > 0) {
   console.error(
@@ -26,7 +31,9 @@ if (missingEnvDb.length > 0) {
 }
 
 const requiredEnvApp: string[] = ['JWT_SECRET'];
-const missingEnvApp: string[] = requiredEnvApp.filter((key) => !process.env[key]);
+const missingEnvApp: string[] = requiredEnvApp.filter(
+  (key) => !process.env[key],
+);
 if (missingEnvApp.length > 0) {
   console.error(
     `❌ Missing required environment variables for application: ${missingEnvApp.join(', ')}`,
@@ -42,8 +49,8 @@ const portString: string = process.env.PORT || '5000';
 const PORT: number = parseInt(portString, 10);
 
 if (isNaN(PORT)) {
-    console.error(`❌ Invalid PORT specified: ${portString}. Must be a number.`);
-    process.exit(1);
+  console.error(`❌ Invalid PORT specified: ${portString}. Must be a number.`);
+  process.exit(1);
 }
 
 const swaggerOptions: swaggerJsdoc.Options = {
@@ -82,41 +89,70 @@ app.use(
 );
 
 const swaggerUiOptions: swaggerUi.SwaggerUiOptions = {
-    explorer: true,
-    customSiteTitle: 'Events API Documentation',
-    swaggerOptions: {
-        persistAuthorization: true,
-    },
+  explorer: true,
+  customSiteTitle: 'Events API Documentation',
+  swaggerOptions: {
+    persistAuthorization: true,
+  },
 };
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, swaggerUiOptions),
+);
 
 interface OpenApiError extends Error {
-    status?: number;
-    errors?: Array<{ path: string; message: string }>;
+  status?: number;
+  errors?: Array<{ path: string; message: string }>;
 }
-app.use((err: OpenApiError | Error, req: Request, res: Response, next: NextFunction): void => {
-  if (err && typeof err === 'object' && 'status' in err && err.status && Array.isArray(err.errors)) {
-    console.error('OpenAPI Validation Error:', err.errors);
-    res.status(err.status).json({
-      message: err.message || 'Request validation failed',
-      errors: err.errors.map((e) => ({
-        path: e.path,
-        message: e.message,
-      })),
-    });
-    return;
-  }
-  if (err instanceof Error && (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError')) {
-    console.error('JWT/Auth Error:', err.message);
-    return next(new UnauthorizedError(err.message || 'Authentication Failed'));
-  }
-  if (err && typeof err === 'object' && 'status' in err && err.status === 401) {
+app.use(
+  (
+    err: OpenApiError | Error,
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): void => {
+    if (
+      err &&
+      typeof err === 'object' &&
+      'status' in err &&
+      err.status &&
+      Array.isArray(err.errors)
+    ) {
+      console.error('OpenAPI Validation Error:', err.errors);
+      res.status(err.status).json({
+        message: err.message || 'Request validation failed',
+        errors: err.errors.map((e) => ({
+          path: e.path,
+          message: e.message,
+        })),
+      });
+      return;
+    }
+    if (
+      err instanceof Error &&
+      (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError')
+    ) {
+      console.error('JWT/Auth Error:', err.message);
+      return next(
+        new UnauthorizedError(err.message || 'Authentication Failed'),
+      );
+    }
+    if (
+      err &&
+      typeof err === 'object' &&
+      'status' in err &&
+      err.status === 401
+    ) {
       console.error('Passport Auth Error:', err.message || 'Unauthorized');
-      return next(new UnauthorizedError(err.message || 'Authentication Failed'));
-  }
+      return next(
+        new UnauthorizedError(err.message || 'Authentication Failed'),
+      );
+    }
 
-  next(err);
-});
+    next(err);
+  },
+);
 
 app.use('/auth', authRoutes);
 app.use('/', publicRoutes);
@@ -146,10 +182,10 @@ const startServer = async (): Promise<void> => {
     });
   } catch (error: unknown) {
     if (error instanceof Error) {
-        console.error('❌ Server startup failed:', error.message);
-        console.error(error.stack);
+      console.error('❌ Server startup failed:', error.message);
+      console.error(error.stack);
     } else {
-        console.error('❌ Server startup failed with unknown error:', error);
+      console.error('❌ Server startup failed with unknown error:', error);
     }
     process.exit(1);
   }

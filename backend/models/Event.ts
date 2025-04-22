@@ -7,14 +7,25 @@ import {
   NonAttribute,
   Optional,
   InferAttributes,
-  InferCreationAttributes
+  InferCreationAttributes,
 } from 'sequelize';
 import sequelizeConnection from '../db.js';
 import User from './User.js';
 
-export type EventCategory = 'concert' | 'lecture' | 'exhibition' | 'master class' | 'sport';
+export type EventCategory =
+  | 'concert'
+  | 'lecture'
+  | 'exhibition'
+  | 'master class'
+  | 'sport';
 
-const validCategories: EventCategory[] = ['concert', 'lecture', 'exhibition', 'master class', 'sport'];
+const validCategories: EventCategory[] = [
+  'concert',
+  'lecture',
+  'exhibition',
+  'master class',
+  'sport',
+];
 
 // Убираем EventCreationAttributes
 // export interface EventCreationAttributes extends Optional<EventAttributesForModel, 'id' | 'description' | 'created_at'> {}
@@ -30,7 +41,10 @@ interface EventAttributesForModel {
   created_at: Date;
 }
 
-class Event extends Model<InferAttributes<Event>, InferCreationAttributes<Event>> {
+class Event extends Model<
+  InferAttributes<Event>,
+  InferCreationAttributes<Event>
+> {
   declare id: CreationOptional<number>;
   declare title: string;
   declare description: CreationOptional<string | null>;
@@ -101,9 +115,9 @@ class Event extends Model<InferAttributes<Event>, InferCreationAttributes<Event>
           },
         },
         created_at: {
-            type: DataTypes.DATE,
-            allowNull: false,
-            defaultValue: DataTypes.NOW
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
         },
       },
       {
@@ -117,20 +131,20 @@ class Event extends Model<InferAttributes<Event>, InferCreationAttributes<Event>
           { fields: ['created_by'] },
           { fields: ['category'] },
         ],
-      }
+      },
     );
   }
 
   public static initializeAssociations(): void {
-      Event.belongsTo(User, {
-        foreignKey: 'created_by',
-        as: 'creator',
-      });
+    Event.belongsTo(User, {
+      foreignKey: 'created_by',
+      as: 'creator',
+    });
 
-       User.hasMany(Event, {
-         foreignKey: 'created_by',
-         as: 'createdEvents',
-       });
+    User.hasMany(Event, {
+      foreignKey: 'created_by',
+      as: 'createdEvents',
+    });
   }
 }
 

@@ -6,7 +6,7 @@ import {
   CreationOptional,
   Sequelize,
   ModelStatic,
-  Optional
+  Optional,
 } from 'sequelize';
 import bcrypt from 'bcrypt';
 import sequelizeConnection from '../db.js';
@@ -15,7 +15,10 @@ const SALT_ROUNDS = 10;
 
 export type UserRole = 'user' | 'admin';
 
-export type UserCreationAttributes = Optional<InferAttributes<User>, 'id' | 'created_at' | 'role' | 'password'>;
+export type UserCreationAttributes = Optional<
+  InferAttributes<User>,
+  'id' | 'created_at' | 'role' | 'password'
+>;
 
 class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
   declare id: CreationOptional<number>;
@@ -63,9 +66,9 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
           defaultValue: 'user',
         },
         created_at: {
-            type: DataTypes.DATE,
-            allowNull: false,
-            defaultValue: DataTypes.NOW
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
         },
       },
       {
@@ -87,20 +90,25 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
             if (user.password) {
               user.password = await bcrypt.hash(user.password, SALT_ROUNDS);
             }
-
           },
           beforeUpdate: async (user: User): Promise<void> => {
             if (user.changed('password') && user.getDataValue('password')) {
               const newPassword = user.getDataValue('password');
-              if (typeof newPassword === 'string' && (newPassword.length < 50 || !newPassword.startsWith('$2'))) {
+              if (
+                typeof newPassword === 'string' &&
+                (newPassword.length < 50 || !newPassword.startsWith('$2'))
+              ) {
                 user.password = await bcrypt.hash(newPassword, SALT_ROUNDS);
               }
-            } else if (user.changed('password') && !user.getDataValue('password')) {
+            } else if (
+              user.changed('password') &&
+              !user.getDataValue('password')
+            ) {
               user.password = null;
             }
           },
         },
-      }
+      },
     );
   }
 
@@ -109,14 +117,14 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
 
     if (!passwordHash) {
       console.warn(
-        `Password hash not present on User instance ${this.id}. Refetching with password scope...`
+        `Password hash not present on User instance ${this.id}. Refetching with password scope...`,
       );
       const UserWithScope = User.scope('withPassword') as typeof User;
       const userWithHash = await UserWithScope.findByPk(this.id);
 
       if (!userWithHash || !userWithHash.getDataValue('password')) {
         console.error(
-          `Failed to refetch user ${this.id} with password or password hash is null.`
+          `Failed to refetch user ${this.id} with password or password hash is null.`,
         );
         return false;
       }
@@ -124,7 +132,7 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
     }
 
     if (typeof passwordHash !== 'string') {
-        return false;
+      return false;
     }
 
     return bcrypt.compare(passwordToVerify, passwordHash);

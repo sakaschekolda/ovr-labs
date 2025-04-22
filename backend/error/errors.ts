@@ -11,7 +11,11 @@ export class ApiError extends BaseError {
   public statusCode: number;
   public errors?: ValidationErrorsObject | null;
 
-  constructor(statusCode: number, message: string, errors?: ValidationErrorsObject | null) {
+  constructor(
+    statusCode: number,
+    message: string,
+    errors?: ValidationErrorsObject | null,
+  ) {
     super(message);
     this.statusCode = statusCode;
     if (errors) {
@@ -21,7 +25,10 @@ export class ApiError extends BaseError {
 }
 
 export class ValidationError extends ApiError {
-  constructor(errors: ValidationErrorsObject, message: string = 'Validation failed.') {
+  constructor(
+    errors: ValidationErrorsObject,
+    message: string = 'Validation failed.',
+  ) {
     super(400, message, errors);
     this.name = 'ValidationError';
   }
