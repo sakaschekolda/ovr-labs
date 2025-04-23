@@ -5,13 +5,13 @@ import {
   NextFunction,
   RequestHandler,
 } from 'express';
-import { ValidationError } from '../error/errors.js';
-import Event, { EventCategory } from '../models/Event.js';
-import { handleAsync } from '../utils/asyncHandler.js';
-import { authenticateJWT } from '../middleware/auth.js';
+import { ValidationError } from '@utils/errors';
+import Event, { EventCategory } from '@models/Event';
+import { handleAsync } from '@utils/asyncHandler';
+import { authenticateJWT } from '@middleware/auth';
 import { InferAttributes } from 'sequelize';
 import { ParsedQs } from 'qs';
-import passport from '../config/passport.js';
+import passport from '@config/passport';
 import { ParamsDictionary } from 'express-serve-static-core';
 
 interface ModifyEventParams extends Record<string, string> {

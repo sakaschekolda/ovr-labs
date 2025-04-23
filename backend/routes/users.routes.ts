@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction, Router } from 'express';
-import User, { UserRole } from '../models/User.js';
-import { ApiError, ValidationError, NotFoundError } from '../error/errors.js';
-import { handleAsync } from '../utils/asyncHandler.js';
+import User, { UserRole } from '@models/User';
+import { ApiError, ValidationError, NotFoundError } from '@utils/errors';
+import { handleAsync } from '@utils/asyncHandler';
 import 'dotenv/config';
 
 export interface GetAllUsersResponseBody {

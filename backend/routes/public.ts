@@ -1,6 +1,6 @@
 import express, { Router } from 'express';
-import * as eventController from '../controllers/event.controller.js';
-import { handleAsync } from '../utils/asyncHandler.js';
+import * as eventController from '@controllers/event.controller';
+import { handleAsync } from '@utils/asyncHandler';
 
 const router: Router = express.Router();
 

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import User, { UserRole } from '../models/User.js';
-import { ValidationError, NotFoundError } from '../error/errors.js';
+import User, { UserRole } from '@models/User.js';
+import { ValidationError, NotFoundError } from '@utils/errors.js';
 import 'dotenv/config';
 
 interface GetAllUsersResponseBody {

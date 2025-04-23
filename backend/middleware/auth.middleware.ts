@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/no-empty-object-type */
 import { Request, Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import User from '../models/User.js';
-import { UnauthorizedError } from '../error/errors.js';
+import User from '@models/User.js';
+import { UnauthorizedError } from '@utils/errors.js';
 import 'dotenv/config';
 
 declare global {

@@ -1,4 +1,3 @@
-// eslint.config.mjs
 import globals from 'globals';
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
@@ -15,6 +14,8 @@ export default tseslint.config(
         'express.d.ts',
         'eslint.config.mjs',
         '.prettierrc.cjs',
+        'tsconfig-paths.js',
+        'jest.config.js',
     ],
   },
 
@@ -32,6 +33,17 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-unused-vars': ['off', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+    },
+  },
+
+  {
+    files: ['**/*.js'],
+    languageOptions: {
+      parserOptions: {
+        ecmaVersion: 'latest',
+      },
     },
   },
 

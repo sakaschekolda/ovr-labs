@@ -9,18 +9,50 @@ import {
   InferAttributes,
   InferCreationAttributes,
 } from 'sequelize';
-import Event, { EventCategory } from '../models/Event.js';
-import User from '../models/User.js';
+import Event, { EventCategory } from '@models/Event';
+import User from '@models/User';
 import {
   ApiError,
   ValidationError,
   NotFoundError,
   ForbiddenError,
-} from '../error/errors.js';
+  ValidationErrorsObject,
+} from '@utils/errors';
 import 'dotenv/config';
 
 interface SequelizeError extends Error {
   errors?: Array<{ path?: string | null; message: string }>;
+}
+
+interface AuthenticatedUser {
+  id: number;
+  name: string;
+  role: string;
+}
+
+function isSequelizeError(error: unknown): error is SequelizeError {
+  return error instanceof Error && 'errors' in error;
+}
+
+function isAuthenticatedUser(user: unknown): user is AuthenticatedUser {
+  return (
+    typeof user === 'object' &&
+    user !== null &&
+    'id' in user &&
+    typeof (user as { id: unknown }).id === 'number'
+  );
+}
+
+function handleSequelizeError(error: SequelizeError): ValidationError {
+  const errors: ValidationErrorsObject = {};
+  if (error.errors && Array.isArray(error.errors)) {
+    error.errors.forEach((err) => {
+      if (err.path) {
+        errors[err.path] = err.message;
+      }
+    });
+  }
+  return new ValidationError(errors);
 }
 
 interface GetAllEventsQuery {
@@ -165,7 +197,7 @@ export const createEvent = async (
   try {
     const authenticatedUser = req.user;
 
-    if (!authenticatedUser || typeof authenticatedUser.id !== 'number') {
+    if (!isAuthenticatedUser(authenticatedUser)) {
       return next(
         new ApiError(401, 'Authentication failed, user not found on request.'),
       );
@@ -236,35 +268,14 @@ export const createEvent = async (
 
     res.status(201).json({ data: createdEventWithCreator ?? event });
   } catch (error: unknown) {
-    if (error instanceof Error && error.name === 'SequelizeValidationError') {
-      const errors: Record<string, string> = {};
-      const sequelizeError = error as SequelizeError;
-      if (sequelizeError.errors && Array.isArray(sequelizeError.errors)) {
-        sequelizeError.errors.forEach((err) => {
-          if (err.path) {
-            errors[err.path] = err.message;
-          }
-        });
-      }
-      return next(
-        new ValidationError(
-          errors,
-          'Event creation failed database validation.',
-        ),
-      );
+    if (isSequelizeError(error)) {
+      const validationError: ValidationError = handleSequelizeError(error);
+      return next(validationError);
     }
-    if (
-      error instanceof Error &&
-      error.name === 'SequelizeForeignKeyConstraintError'
-    ) {
-      return next(
-        new ValidationError(
-          { created_by: `Invalid user specified. User may not exist.` },
-          'Failed to create event due to invalid creator reference.',
-        ),
-      );
+    if (error instanceof Error) {
+      return next(error);
     }
-    next(error);
+    return next(new ApiError(500, 'An unexpected error occurred'));
   }
 };
 
@@ -276,7 +287,7 @@ export const updateEvent = async (
   try {
     const authenticatedUser = req.user;
 
-    if (!authenticatedUser || typeof authenticatedUser.id !== 'number') {
+    if (!isAuthenticatedUser(authenticatedUser)) {
       return next(
         new ApiError(401, 'Authentication failed, user not found on request.'),
       );
@@ -400,21 +411,14 @@ export const updateEvent = async (
 
     res.status(200).json({ data: updatedEvent });
   } catch (error: unknown) {
-    if (error instanceof Error && error.name === 'SequelizeValidationError') {
-      const errors: Record<string, string> = {};
-      const sequelizeError = error as SequelizeError;
-      if (sequelizeError.errors && Array.isArray(sequelizeError.errors)) {
-        sequelizeError.errors.forEach((err) => {
-          if (err.path) {
-            errors[err.path] = err.message;
-          }
-        });
-      }
-      return next(
-        new ValidationError(errors, 'Event update failed database validation.'),
-      );
+    if (isSequelizeError(error)) {
+      const validationError: ValidationError = handleSequelizeError(error);
+      return next(validationError);
     }
-    next(error);
+    if (error instanceof Error) {
+      return next(error);
+    }
+    return next(new ApiError(500, 'An unexpected error occurred'));
   }
 };
 
@@ -426,7 +430,7 @@ export const deleteEvent = async (
   try {
     const authenticatedUser = req.user;
 
-    if (!authenticatedUser || typeof authenticatedUser.id !== 'number') {
+    if (!isAuthenticatedUser(authenticatedUser)) {
       return next(
         new ApiError(401, 'Authentication failed, user not found on request.'),
       );
@@ -472,6 +476,13 @@ export const deleteEvent = async (
 
     res.status(204).end();
   } catch (error: unknown) {
-    next(error);
+    if (isSequelizeError(error)) {
+      const validationError: ValidationError = handleSequelizeError(error);
+      return next(validationError);
+    }
+    if (error instanceof Error) {
+      return next(error);
+    }
+    return next(new ApiError(500, 'An unexpected error occurred'));
   }
 };

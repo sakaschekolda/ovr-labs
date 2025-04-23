@@ -1,8 +1,8 @@
 import express, { Router, Request, Response } from 'express';
 import { Router as ExpressRouter } from 'express'; // Импортируем тип
 
-import userRoutes from './users.routes.js';
-import eventRoutes from './events.routes.js';
+import userRoutes from '@routes/users.routes';
+import eventRoutes from '@routes/events.routes';
 
 const router: Router = express.Router();
 

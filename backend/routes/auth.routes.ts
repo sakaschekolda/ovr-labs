@@ -1,8 +1,8 @@
 import express, { Router, Request, Response, NextFunction } from 'express';
-import User, { UserRole } from '../models/User.js';
-import { ValidationError } from '../error/errors.js';
-import { login } from '../controllers/auth.controller.js';
-import passport from '../config/passport.js';
+import User, { UserRole } from '@models/User';
+import { ValidationError } from '@utils/errors';
+import { login } from '@controllers/auth.controller';
+import passport from '@config/passport';
 
 const router: Router = express.Router();
 

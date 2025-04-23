@@ -9,7 +9,7 @@ import {
   Optional,
 } from 'sequelize';
 import bcrypt from 'bcrypt';
-import sequelizeConnection from '../db.js';
+import sequelizeConnection from '@config/db';
 
 const SALT_ROUNDS = 10;
 

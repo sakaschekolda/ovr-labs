@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt, { SignOptions } from 'jsonwebtoken';
-import User from '../models/User.js';
-import { ValidationError, UnauthorizedError } from '../error/errors.js';
+import User from '@models/User';
+import { ValidationError, UnauthorizedError } from '@utils/errors';
 import 'dotenv/config';
 
 interface LoginRequestBody {

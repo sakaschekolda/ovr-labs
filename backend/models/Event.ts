@@ -9,8 +9,8 @@ import {
   InferAttributes,
   InferCreationAttributes,
 } from 'sequelize';
-import sequelizeConnection from '../db.js';
-import User from './User.js';
+import sequelizeConnection from '@config/db';
+import User from '@models/User';
 
 export type EventCategory =
   | 'concert'

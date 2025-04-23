@@ -6,7 +6,7 @@ import {
   UnauthorizedError,
   ForbiddenError,
   ValidationErrorsObject,
-} from './errors.js';
+} from './errors';
 
 interface MiddlewareError extends Error {
   status?: number;
@@ -16,21 +16,32 @@ interface MiddlewareError extends Error {
     | Array<{ path?: string | null; message: string }>;
 }
 
-interface RequestUser {
-  id?: number | string;
+interface AuthenticatedUser {
+  id: number;
+  name: string;
+  role: string;
+}
+
+function isAuthenticatedUser(user: unknown): user is AuthenticatedUser {
+  return (
+    typeof user === 'object' &&
+    user !== null &&
+    'id' in user &&
+    typeof (user as { id: unknown }).id === 'number'
+  );
 }
 
 const errorHandler = (
   err: MiddlewareError | ApiError | Error,
-  req: Request & { user?: RequestUser },
+  req: Request & { user?: unknown },
   res: Response,
   _next: NextFunction,
 ): void => {
   console.error('--------------------');
   console.error(`[GLOBAL ERROR HANDLER] ${new Date().toISOString()}`);
   console.error(`Request: ${req.method} ${req.originalUrl}`);
-  if (req.user?.id) {
-    console.error(`Authenticated User ID (if available): ${req.user.id}`);
+  if (isAuthenticatedUser(req.user)) {
+    console.error(`Authenticated User ID: ${req.user.id}`);
   }
   console.error(`Error Name: ${err.name}`);
   console.error(`Error Message: ${err.message}`);

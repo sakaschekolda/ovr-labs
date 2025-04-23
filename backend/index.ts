@@ -1,17 +1,26 @@
+import 'module-alias/register';
+import './tsconfig-paths';
 import 'dotenv/config';
-import express, { Express, Request, Response, NextFunction } from 'express';
+import express from 'express';
+import type {
+  Request,
+  Response,
+  NextFunction,
+  ErrorRequestHandler,
+} from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import * as OpenApiValidator from 'express-openapi-validator';
-import sequelizeConnection from './db.js';
-import { NotFoundError, UnauthorizedError } from './error/errors.js';
-import errorHandler from './error/errorHandler.js';
-import passport from './config/passport.js';
-import mainApiRouter from './routes/index.js';
-import authRoutes from './routes/auth.routes.js';
-import publicRoutes from './routes/public.js';
+import sequelizeConnection from '@config/db';
+import { NotFoundError, UnauthorizedError } from '@utils/errors';
+import errorHandler from '@utils/errorHandler';
+import passport from '@config/passport';
+import mainApiRouter from '@routes/index';
+import authRoutes from '@routes/auth.routes';
+import publicRoutes from '@routes/public';
+import * as schemas from './swagger/schemas';
 
 const requiredEnvDb: string[] = [
   'DB_NAME',
@@ -44,7 +53,7 @@ if (missingEnvApp.length > 0) {
   process.exit(1);
 }
 
-const app: Express = express();
+const app = express();
 const portString: string = process.env.PORT || '5000';
 const PORT: number = parseInt(portString, 10);
 
@@ -67,8 +76,18 @@ const swaggerOptions: swaggerJsdoc.Options = {
         description: 'Development server',
       },
     ],
+    components: {
+      schemas: schemas,
+      securitySchemes: {
+        BearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
   },
-  apis: ['./routes/*.ts'],
+  apis: ['./routes/*.ts', './swagger/*.ts'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
@@ -80,8 +99,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 app.use(
   OpenApiValidator.middleware({
-    // @ts-expect-error - swagger-jsdoc and express-openapi-validator types don't match perfectly
-    apiSpec: swaggerSpec,
+    // @ts-expect-error Type mismatch between swagger-jsdoc and express-openapi-validator
+    apiSpec: swaggerSpec as unknown as Record<string, unknown>,
     validateRequests: true,
     validateResponses: false,
     ignorePaths: /\/api-docs|\/auth\/login|\/auth\/register/,
@@ -105,54 +124,53 @@ interface OpenApiError extends Error {
   status?: number;
   errors?: Array<{ path: string; message: string }>;
 }
-app.use(
-  (
-    err: OpenApiError | Error,
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): void => {
-    if (
-      err &&
-      typeof err === 'object' &&
-      'status' in err &&
-      err.status &&
-      Array.isArray(err.errors)
-    ) {
-      console.error('OpenAPI Validation Error:', err.errors);
-      res.status(err.status).json({
-        message: err.message || 'Request validation failed',
-        errors: err.errors.map((e) => ({
-          path: e.path,
-          message: e.message,
-        })),
-      });
-      return;
-    }
-    if (
-      err instanceof Error &&
-      (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError')
-    ) {
-      console.error('JWT/Auth Error:', err.message);
-      return next(
-        new UnauthorizedError(err.message || 'Authentication Failed'),
-      );
-    }
-    if (
-      err &&
-      typeof err === 'object' &&
-      'status' in err &&
-      err.status === 401
-    ) {
-      console.error('Passport Auth Error:', err.message || 'Unauthorized');
-      return next(
-        new UnauthorizedError(err.message || 'Authentication Failed'),
-      );
-    }
 
-    next(err);
-  },
-);
+type ErrorWithStatus = Error & { status?: number };
+
+const errorMiddleware: ErrorRequestHandler = (
+  err: OpenApiError | ErrorWithStatus,
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void => {
+  if (
+    err &&
+    typeof err === 'object' &&
+    'status' in err &&
+    err.status &&
+    'errors' in err &&
+    Array.isArray(err.errors)
+  ) {
+    console.error('OpenAPI Validation Error:', err.errors);
+    res.status(err.status).json({
+      message: err.message || 'Request validation failed',
+      errors: err.errors.map((e: { path: string; message: string }) => ({
+        path: e.path,
+        message: e.message,
+      })),
+    });
+    return;
+  }
+  if (
+    err instanceof Error &&
+    (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError')
+  ) {
+    console.error('JWT/Auth Error:', err.message);
+    const error = new UnauthorizedError(err.message || 'Authentication Failed');
+    next(error);
+    return;
+  }
+  if (err && typeof err === 'object' && 'status' in err && err.status === 401) {
+    console.error('Passport Auth Error:', err.message || 'Unauthorized');
+    const error = new UnauthorizedError(err.message || 'Authentication Failed');
+    next(error);
+    return;
+  }
+
+  next(err);
+};
+
+app.use(errorMiddleware);
 
 app.use('/auth', authRoutes);
 app.use('/', publicRoutes);
