@@ -1,0 +1,36 @@
+.errorContainer {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.errorContent {
+  display: flex;
+  align-items: center;
+  background-color: #ffebee;
+  border: 1px solid #ffcdd2;
+  border-radius: 4px;
+  padding: 12px 16px;
+  min-width: 300px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.errorMessage {
+  color: #c62828;
+  flex-grow: 1;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: #c62828;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 8px;
+  margin-left: 8px;
+
+  &:hover {
+    color: #b71c1c;
+  }
+} 

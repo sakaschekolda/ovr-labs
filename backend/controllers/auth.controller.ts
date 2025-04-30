@@ -55,20 +55,22 @@ export const login = async (
     const { email, password } = req.body;
 
     if (!email || !password) {
-      throw new ValidationError({
-        credentials: 'Email and password are required.',
-      });
+      const errors: Record<string, string> = {};
+      if (!email) errors.email = 'Email is required';
+      if (!password) errors.password = 'Password is required';
+      throw new ValidationError(errors);
     }
 
     const user = await User.scope('withPassword').findOne({ where: { email } });
 
     if (!user) {
-      return next(new UnauthorizedError('Invalid email or password.'));
+      throw new UnauthorizedError('Invalid credentials. Please check your email and password.');
     }
+
     const isValid = await user.validPassword(password);
 
     if (!isValid) {
-      return next(new UnauthorizedError('Invalid email or password.'));
+      throw new UnauthorizedError('Invalid credentials. Please check your email and password.');
     }
 
     const payload = {

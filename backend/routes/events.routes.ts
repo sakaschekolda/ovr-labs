@@ -13,6 +13,7 @@ import { InferAttributes } from 'sequelize';
 import { ParsedQs } from 'qs';
 import passport from '@config/passport';
 import { ParamsDictionary } from 'express-serve-static-core';
+import User, { UserRole } from '@models/User';
 
 interface ModifyEventParams extends Record<string, string> {
   id: string;
@@ -63,20 +64,20 @@ const jwtAuthMiddleware = passport.authenticate('jwt', {
 /**
  * @swagger
  * tags:
- *   name: Protected Events
- *   description: Event management endpoints requiring authentication
+ *   name: Protected Routes
+ *   description: Protected endpoints requiring authentication
  */
 
 /**
  * @swagger
- * /events:
+ * /api/events:
  *   post:
  *     summary: Create a new event (Requires Authentication)
- *     tags: [Protected Events]
+ *     tags: [Protected Routes]
  *     security:
  *       - BearerAuth: []
  *     requestBody:
- *       description: Event object. `title`, `date`, `category` required. `date` must be future. `created_by` is set automatically from authenticated user.
+ *       description: Event object. `title`, `date`, `category` required. `date` must be future. The creator ID is automatically set from the authenticated user.
  *       required: true
  *       content:
  *         application/json:
@@ -127,13 +128,27 @@ router.post(
     ParsedQs
   >(async (req, res, next) => {
     try {
-      const { title, description, date, category, created_by } = req.body;
+      const { title, description, date, category } = req.body;
+      const user = req.user as User | undefined;
+
+      if (!user) {
+        throw new ValidationError(
+          { auth: 'User not authenticated' },
+          'Event creation failed.',
+        );
+      }
+
+      if (user.role !== 'admin') {
+        throw new ValidationError(
+          { auth: 'Only administrators can create events' },
+          'Event creation failed.',
+        );
+      }
 
       const validationErrors: Record<string, string> = {};
       if (!title) validationErrors.title = 'Title is required';
       if (!date) validationErrors.date = 'Date is required';
       if (!category) validationErrors.category = 'Category is required';
-      if (!created_by) validationErrors.created_by = 'Creator ID is required';
 
       if (Object.keys(validationErrors).length > 0) {
         throw new ValidationError(
@@ -147,7 +162,7 @@ router.post(
         description,
         date: new Date(date),
         category,
-        created_by,
+        created_by: user.id,
       });
 
       const response: EventResponseBody = {
@@ -169,10 +184,10 @@ router.post(
 
 /**
  * @swagger
- * /events/{id}:
+ * /api/events/{id}:
  *   put:
  *     summary: Update an existing event (Requires Authentication & Ownership)
- *     tags: [Protected Events]
+ *     tags: [Protected Routes]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -199,12 +214,9 @@ router.post(
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   $ref: '#/components/schemas/Event'
+ *               $ref: '#/components/schemas/Event'
  *       400:
- *         description: Validation Error (Invalid ID, invalid data, no valid fields provided, attempt to update immutable fields).
+ *         description: Validation Error (e.g., invalid format, date not future).
  *         content:
  *           application/json:
  *             schema:
@@ -216,13 +228,13 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
- *         description: Permission denied (User does not own the event).
+ *         description: Not authorized to update this event.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: Event with the specified ID was not found.
+ *         description: Event not found.
  *         content:
  *           application/json:
  *             schema:
@@ -285,7 +297,7 @@ router.put(
  * /events/{id}:
  *   delete:
  *     summary: Delete an event by its ID (Requires Authentication & Ownership)
- *     tags: [Protected Events]
+ *     tags: [Protected Routes]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -353,9 +365,24 @@ router.delete(
   ),
 );
 
+/**
+ * @swagger
+ * /api/events:
+ *   get:
+ *     summary: Get all events (Public)
+ *     tags: [Public Events]
+ *     responses:
+ *       200:
+ *         description: A list of events
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Event'
+ */
 router.get(
   '/',
-  jwtAuthMiddleware,
   handleAsync<ParamsDictionary, EventResponseBody[], unknown, ParsedQs>(
     async (req, res, next) => {
       try {
@@ -375,6 +402,126 @@ router.get(
       }
     },
   ),
+);
+
+/**
+ * @swagger
+ * /api/users/{id}/role:
+ *   put:
+ *     summary: Update user role (Admin only)
+ *     tags: [Protected Routes]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema: { type: integer }
+ *         required: true
+ *         description: Numeric ID of the user to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [role]
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [user, admin]
+ *                 description: New role for the user
+ *                 example: "admin"
+ *     responses:
+ *       200:
+ *         description: Role updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User role updated successfully"
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Invalid role or user not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Authentication required or token invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Only administrators can change user roles
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.put(
+  '/users/:id/role',
+  jwtAuthMiddleware,
+  handleAsync<
+    { id: string },
+    { message: string; user: User },
+    { role: UserRole },
+    ParsedQs
+  >(async (req, res, next) => {
+    try {
+      const adminUser = req.user as User | undefined;
+      const { id } = req.params;
+      const { role } = req.body;
+
+      if (!adminUser) {
+        throw new ValidationError(
+          { auth: 'User not authenticated' },
+          'Role update failed.',
+        );
+      }
+
+      if (adminUser.role !== 'admin') {
+        throw new ValidationError(
+          { auth: 'Only administrators can change user roles' },
+          'Role update failed.',
+        );
+      }
+
+      const userToUpdate = await User.findByPk(id);
+      if (!userToUpdate) {
+        throw new ValidationError(
+          { user: 'User not found' },
+          'Role update failed.',
+        );
+      }
+
+      if (!['user', 'admin'].includes(role)) {
+        throw new ValidationError(
+          { role: 'Invalid role specified' },
+          'Role update failed.',
+        );
+      }
+
+      await userToUpdate.update({ role });
+      
+      res.json({
+        message: 'User role updated successfully',
+        user: userToUpdate,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }),
 );
 
 export default router;

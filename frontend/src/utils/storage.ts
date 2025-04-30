@@ -1,35 +1,29 @@
-export const storage = {
-  get: <T>(key: string): T | null => {
+const storage = {
+  get(key: string) {
+    const value = localStorage.getItem(key);
+    if (!value) return null;
     try {
-      const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : null;
-    } catch (error) {
-      console.error('Error getting data from localStorage:', error);
-      return null;
+      return JSON.parse(value);
+    } catch {
+      return value;
     }
   },
 
-  set: <T>(key: string, value: T): void => {
-    try {
+  set(key: string, value: any) {
+    if (typeof value === 'object') {
       localStorage.setItem(key, JSON.stringify(value));
-    } catch (error) {
-      console.error('Error setting data to localStorage:', error);
+    } else {
+      localStorage.setItem(key, value);
     }
   },
 
-  remove: (key: string): void => {
-    try {
-      localStorage.removeItem(key);
-    } catch (error) {
-      console.error('Error removing data from localStorage:', error);
-    }
+  remove(key: string) {
+    localStorage.removeItem(key);
   },
 
-  clear: (): void => {
-    try {
-      localStorage.clear();
-    } catch (error) {
-      console.error('Error clearing localStorage:', error);
-    }
+  clear() {
+    localStorage.clear();
   },
-}; 
+};
+
+export { storage }; 

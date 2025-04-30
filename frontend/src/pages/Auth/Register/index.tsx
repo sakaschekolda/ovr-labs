@@ -1,69 +1,102 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { api } from '../../../api/config';
-import Button from '../../../components/Button';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 import './styles.css';
 
 const Register: React.FC = () => {
-  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    username: '',
+    name: '',
     email: '',
     password: '',
+    confirmPassword: ''
   });
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const { register } = useAuth();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Пароли не совпадают');
+      return;
+    }
+
     try {
-      await api.post('/auth/register', formData);
-      navigate('/login');
+      await register(formData.name, formData.email, formData.password);
+      navigate('/');
     } catch (error) {
-      console.error('Registration error:', error);
+      setError('Ошибка при регистрации');
     }
   };
 
   return (
-    <div className="auth-container">
-      <h1>Регистрация</h1>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="username">Имя пользователя</label>
-          <input
-            type="text"
-            id="username"
-            value={formData.username}
-            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-            required
-          />
+    <div className="auth-page">
+      <div className="auth-container">
+        <div className="auth-content">
+          <Link to="/" className="auth-logo">
+            <h1>EventHub</h1>
+          </Link>
+          <h2>Регистрация</h2>
+          <p>Создайте новый аккаунт</p>
+          {error && <div className="auth-error">{error}</div>}
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <div className="form-group">
+              <input
+                type="text"
+                name="name"
+                placeholder="Имя"
+                value={formData.name}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <input
+                type="password"
+                name="password"
+                placeholder="Пароль"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <input
+                type="password"
+                name="confirmPassword"
+                placeholder="Подтвердите пароль"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <button type="submit" className="auth-button">Зарегистрироваться</button>
+          </form>
+          <p className="auth-link">
+            Уже есть аккаунт? <Link to="/auth/login">Войти</Link>
+          </p>
         </div>
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
-          <input
-            type="email"
-            id="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            required
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="password">Пароль</label>
-          <input
-            type="password"
-            id="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            required
-          />
-        </div>
-        <Button onClick={handleSubmit}>Зарегистрироваться</Button>
-      </form>
-      <p>
-        Уже есть аккаунт?{' '}
-        <Button variant="secondary" onClick={() => navigate('/login')}>
-          Войти
-        </Button>
-      </p>
+      </div>
     </div>
   );
 };

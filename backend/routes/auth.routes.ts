@@ -36,7 +36,7 @@ interface SequelizeError extends Error {
 
 /**
  * @swagger
- * /auth/register:
+ * /api/auth/register:
  *   post:
  *     summary: Register a new user
  *     tags: [Authentication]
@@ -107,6 +107,8 @@ router.post(
     ): Promise<void> => {
       try {
         const { name, email, password } = req.body;
+        console.log('Received registration request:', { name, email, password });
+        console.log('Full request body:', req.body);
 
         const validationErrors: Record<string, string> = {};
         if (!name) validationErrors.name = 'Name is required';
@@ -190,7 +192,7 @@ router.post(
 
 /**
  * @swagger
- * /auth/login:
+ * /api/auth/login:
  *   post:
  *     summary: Log in a user
  *     tags: [Authentication]

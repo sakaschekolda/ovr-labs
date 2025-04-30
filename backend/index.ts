@@ -92,8 +92,24 @@ const swaggerOptions: swaggerJsdoc.Options = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    const allowedOrigins = [process.env.FRONTEND_URL, 'http://localhost:3000', 'http://localhost:5173'];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
 app.use(morgan('dev'));
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
@@ -172,9 +188,9 @@ const errorMiddleware: ErrorRequestHandler = (
 
 app.use(errorMiddleware);
 
-app.use('/auth', authRoutes);
-app.use('/', publicRoutes);
-app.use('/', mainApiRouter);
+app.use('/api/auth', authRoutes);
+app.use('/api', publicRoutes);
+app.use('/api', mainApiRouter);
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   if (!res.headersSent) {
