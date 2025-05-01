@@ -1,7 +1,7 @@
 import express, { Router, Request, Response, NextFunction } from 'express';
 import User, { UserRole } from '@models/User';
 import { ValidationError } from '@utils/errors';
-import { login } from '@controllers/auth.controller';
+import { login, resetPassword } from '../controllers/auth.controller';
 import passport from '@config/passport';
 
 const router: Router = express.Router();
@@ -252,5 +252,7 @@ router.post(
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/login', handleAsync(login));
+
+router.post('/reset-password', resetPassword);
 
 export default router;

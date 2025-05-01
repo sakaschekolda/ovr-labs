@@ -21,8 +21,16 @@ interface AuthResponse {
   };
 }
 
+interface ResetPasswordResponse {
+  success: boolean;
+  message?: string;
+}
+
 export const authService = {
   async login(data: LoginData): Promise<AuthResponse> {
+    if (data.password.length < 8) {
+      throw new Error('Password must be at least 8 characters long');
+    }
     const response = await api.post<AuthResponse>('/api/auth/login', data);
     storage.set('token', response.data.token);
     storage.set('user', response.data.user);
@@ -30,6 +38,9 @@ export const authService = {
   },
 
   async register(data: RegisterData): Promise<AuthResponse> {
+    if (data.password.length < 8) {
+      throw new Error('Password must be at least 8 characters long');
+    }
     console.log('Register request data:', data);
     const response = await api.post<AuthResponse>('/api/auth/register', data);
     console.log('Register response:', response.data);
@@ -48,4 +59,13 @@ export const authService = {
   isAuthenticated(): boolean {
     return !!storage.get('token');
   },
+
+  resetPassword: async (email: string, newPassword: string): Promise<ResetPasswordResponse> => {
+    try {
+      const response = await api.post('/api/auth/reset-password', { email, newPassword });
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  }
 }; 

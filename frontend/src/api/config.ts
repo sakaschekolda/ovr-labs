@@ -22,14 +22,9 @@ api.interceptors.request.use((config) => {
 
 // Добавляем интерцептор для обработки ошибок авторизации
 api.interceptors.response.use(
-  (response) => {
-    console.log('Response:', response); // Добавляем логирование для отладки
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error('API Error:', error); // Добавляем логирование для отладки
     if (error.response?.status === 401) {
-      // Очищаем токен, но не перенаправляем
       localStorage.removeItem('token');
       localStorage.removeItem('auth_token_expiry');
     }

@@ -23,6 +23,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   loading: boolean;
   error: string | null;
+  resetPassword: (email: string, newPassword: string) => Promise<void>;
 }
 
 const TOKEN_KEY = 'token';
@@ -74,8 +75,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchUserData = async () => {
     try {
-      const response = await api.get('/api/auth/me');
-      setUser(response.data);
+      setLoading(false);
     } catch (err) {
       console.error('Failed to fetch user data:', err);
       clearToken();
@@ -122,12 +122,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
-      await api.post('/api/auth/logout');
-    } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
       clearToken();
       navigate('/');
+    } catch (err) {
+      console.error('Logout error:', err);
+      clearToken();
+      navigate('/');
+    }
+  };
+
+  const resetPassword = async (email: string, newPassword: string) => {
+    try {
+      const response = await api.post('/api/auth/reset-password', { email, newPassword });
+      if (response.data.success) {
+        setError(null);
+      } else {
+        setError(response.data.message || 'Ошибка при сбросе пароля');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Ошибка при сбросе пароля');
+      throw err;
     }
   };
 
@@ -140,6 +154,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     logout,
     loading,
     error,
+    resetPassword
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -27,10 +27,6 @@ const validCategories: EventCategory[] = [
   'sport',
 ];
 
-// Убираем EventCreationAttributes
-// export interface EventCreationAttributes extends Optional<EventAttributesForModel, 'id' | 'description' | 'created_at'> {}
-
-// Интерфейс атрибутов для экземпляра (для ясности)
 interface EventAttributesForModel {
   id: number;
   title: string;

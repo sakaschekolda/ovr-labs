@@ -6,19 +6,32 @@ import './styles.css';
 
 const Events: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+
+  const categories = ['all', 'concert', 'lecture', 'exhibition', 'master class', 'sport'];
 
   useEffect(() => {
     fetchEvents();
   }, []);
 
+  useEffect(() => {
+    if (selectedCategory === 'all') {
+      setFilteredEvents(events);
+    } else {
+      setFilteredEvents(events.filter(event => event.category === selectedCategory));
+    }
+  }, [selectedCategory, events]);
+
   const fetchEvents = async () => {
     try {
       const data = await eventService.getAllEvents();
       setEvents(data);
+      setFilteredEvents(data);
     } catch (err) {
       setError('Ошибка при загрузке мероприятий');
     } finally {
@@ -50,6 +63,27 @@ const Events: React.FC = () => {
       navigate('/');
     } catch (error) {
       console.error('Logout failed:', error);
+    }
+  };
+
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedCategory(e.target.value);
+  };
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'concert':
+        return 'Концерт';
+      case 'lecture':
+        return 'Лекция';
+      case 'exhibition':
+        return 'Выставка';
+      case 'master class':
+        return 'Мастер-класс';
+      case 'sport':
+        return 'Спорт';
+      default:
+        return category;
     }
   };
 
@@ -92,13 +126,29 @@ const Events: React.FC = () => {
           )}
         </div>
 
+        <div className="category-filter">
+          <label htmlFor="category-select">Категория:</label>
+          <select
+            id="category-select"
+            value={selectedCategory}
+            onChange={handleCategoryChange}
+            className="category-select"
+          >
+            {categories.map(category => (
+              <option key={category} value={category}>
+                {category === 'all' ? 'Все категории' : getCategoryLabel(category)}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="events-grid">
-          {events.map(event => (
+          {filteredEvents.map(event => (
             <div key={event.id} className="event-card">
               <div className="event-content">
                 <h3>{event.title}</h3>
+                <p className="event-category">{getCategoryLabel(event.category)}</p>
                 <p className="event-date">{new Date(event.date).toLocaleDateString()}</p>
-                <p className="event-description">{event.description}</p>
                 <p className="event-location">{event.location}</p>
                 <p className="event-participants">
                   Участников: {event.currentParticipants} / {event.maxParticipants}

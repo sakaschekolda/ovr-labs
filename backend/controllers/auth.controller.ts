@@ -61,10 +61,20 @@ export const login = async (
       throw new ValidationError(errors);
     }
 
+    if (password.length < 8) {
+      throw new ValidationError({
+        password: 'Password must be at least 8 characters long'
+      });
+    }
+
     const user = await User.scope('withPassword').findOne({ where: { email } });
 
     if (!user) {
       throw new UnauthorizedError('Invalid credentials. Please check your email and password.');
+    }
+
+    if (!user.getDataValue('password')) {
+      throw new UnauthorizedError('Please set a new password. Your password needs to be at least 8 characters long.');
     }
 
     const isValid = await user.validPassword(password);
@@ -113,5 +123,40 @@ export const login = async (
         ? error
         : new Error('An unexpected error occurred during login.'),
     );
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      throw new ValidationError({
+        email: 'Email обязателен',
+        newPassword: 'Новый пароль обязателен'
+      });
+    }
+
+    if (newPassword.length < 8) {
+      throw new ValidationError({
+        newPassword: 'Пароль должен быть не менее 8 символов'
+      });
+    }
+
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      throw new UnauthorizedError('Пользователь не найден');
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Пароль успешно обновлен'
+    });
+  } catch (error) {
+    next(error);
   }
 };

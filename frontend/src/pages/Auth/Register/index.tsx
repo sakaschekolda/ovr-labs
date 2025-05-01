@@ -31,11 +31,17 @@ const Register: React.FC = () => {
       return;
     }
 
+    if (formData.password.length < 8) {
+      setError('Пароль должен быть не менее 8 символов');
+      return;
+    }
+
     try {
       await register(formData.name, formData.email, formData.password);
       navigate('/');
-    } catch (error) {
-      setError('Ошибка при регистрации');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Ошибка при регистрации';
+      setError(errorMessage);
     }
   };
 

@@ -7,7 +7,7 @@ import './styles.css';
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, error: authError } = useAuth();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -20,11 +20,24 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError(null);
 
+    if (formData.password.length < 8) {
+      setError('Пароль должен быть не менее 8 символов');
+      return;
+    }
+
     try {
       await login(formData.email, formData.password);
       navigate(from, { replace: true });
-    } catch (err) {
-      setError(authError || 'Произошла ошибка при входе');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Произошла ошибка при входе';
+      if (errorMessage.includes('set a new password')) {
+        navigate('/auth/reset-password', { 
+          state: { email: formData.email },
+          replace: true 
+        });
+      } else {
+        setError(errorMessage);
+      }
     }
   };
 

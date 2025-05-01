@@ -59,6 +59,12 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
         password: {
           type: DataTypes.STRING,
           allowNull: true,
+          validate: {
+            len: {
+              args: [8, 100],
+              msg: 'Password must be at least 8 characters long'
+            }
+          }
         },
         role: {
           type: DataTypes.ENUM('user', 'admin'),

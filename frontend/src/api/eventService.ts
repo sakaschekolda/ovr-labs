@@ -8,6 +8,7 @@ export interface Event {
   location: string;
   maxParticipants: number;
   currentParticipants: number;
+  category: string;
 }
 
 interface ApiResponse<T> {
@@ -20,6 +21,7 @@ export interface CreateEventData {
   date: string;
   location: string;
   maxParticipants: number;
+  category: string;
 }
 
 export interface UpdateEventData extends Partial<CreateEventData> {}
