@@ -1,8 +1,9 @@
 import express, { Router, Request, Response, NextFunction } from 'express';
-import User, { UserRole } from '@models/User';
-import { ValidationError } from '@utils/errors';
-import { login, resetPassword } from '../controllers/auth.controller';
-import passport from '@config/passport';
+import User, { UserRole } from '../models/User';
+import { ValidationError } from '../utils/errors';
+import { login, resetPassword, getCurrentUser } from '../controllers/auth.controller';
+import passport from '../config/passport';
+import { authenticateToken } from '../middleware/auth.middleware';
 
 const router: Router = express.Router();
 
@@ -254,5 +255,43 @@ router.post(
 router.post('/login', handleAsync(login));
 
 router.post('/reset-password', resetPassword);
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user data
+ *     tags: [Authentication]
+ *     description: Get the currently authenticated user's data
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: number
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                       enum: [user, admin]
+ *       401:
+ *         description: Not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get('/me', authenticateToken, getCurrentUser);
 
 export default router;

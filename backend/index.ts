@@ -125,7 +125,7 @@ app.use(
     apiSpec: swaggerSpec as unknown as Record<string, unknown>,
     validateRequests: true,
     validateResponses: false,
-    ignorePaths: /\/api-docs|\/auth\/login|\/auth\/register/,
+    ignorePaths: /\/api-docs|\/auth\/login|\/auth\/register|\/auth\/me/,
   }),
 );
 

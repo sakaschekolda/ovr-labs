@@ -1,28 +1,36 @@
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { logoutUser } from '../../features/auth/authThunks';
 import Button from '../../components/Button';
-import './Home.css';
+import styles from './Home.module.scss';
 
 export const Home = () => {
-  const { isAuthenticated, user } = useAuth();
+  const user = useAppSelector(state => state.auth.user);
+  const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
+  const dispatch = useAppDispatch();
+
+  const handleLogout = () => {
+    dispatch(logoutUser());
+  };
 
   return (
-    <div className="home-container">
+    <div className={styles.homeContainer}>
       {/* Header */}
-      <header className="home-header">
-        <div className="logo">
+      <header className={styles.homeHeader}>
+        <div className={styles.logo}>
           <h1>Event Manager</h1>
         </div>
-        <nav className="auth-nav">
+        <nav className={styles.authNav}>
           {isAuthenticated ? (
-            <div className="user-info">
-              <span>Welcome, {user?.username}</span>
+            <div className={styles.userInfo}>
+              <span>Welcome, {user?.name}</span>
               <Link to="/events">
                 <Button>Events</Button>
               </Link>
+              <Button variant="secondary" onClick={handleLogout}>Выйти</Button>
             </div>
           ) : (
-            <div className="auth-buttons">
+            <div className={styles.authButtons}>
               <Link to="/auth/login">
                 <Button>Login</Button>
               </Link>
@@ -35,8 +43,8 @@ export const Home = () => {
       </header>
 
       {/* Main Content */}
-      <main className="home-content">
-        <section className="hero-section">
+      <main className={styles.homeContent}>
+        <section className={styles.heroSection}>
           <h2>Welcome to Event Manager</h2>
           <p>
             Event Manager is your all-in-one solution for organizing and managing events.
@@ -45,7 +53,7 @@ export const Home = () => {
           </p>
           
           {!isAuthenticated && (
-            <div className="cta-buttons">
+            <div className={styles.ctaButtons}>
               <Link to="/auth/register">
                 <Button variant="primary">Get Started</Button>
               </Link>
@@ -56,18 +64,18 @@ export const Home = () => {
           )}
         </section>
 
-        <section className="features-section">
+        <section className={styles.featuresSection}>
           <h3>Key Features</h3>
-          <div className="features-grid">
-            <div className="feature-card">
+          <div className={styles.featuresGrid}>
+            <div className={styles.featureCard}>
               <h4>Create Events</h4>
               <p>Easily create and manage your own events with our intuitive interface.</p>
             </div>
-            <div className="feature-card">
+            <div className={styles.featureCard}>
               <h4>Join Events</h4>
               <p>Discover and join events that interest you with just a few clicks.</p>
             </div>
-            <div className="feature-card">
+            <div className={styles.featureCard}>
               <h4>Manage Participants</h4>
               <p>Keep track of event participants and manage attendance efficiently.</p>
             </div>

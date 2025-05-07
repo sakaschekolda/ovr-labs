@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAppDispatch, useAppSelector } from '../../../app/hooks';
+import { registerUser } from '../../../features/auth/authThunks';
 import Button from '../../../components/Button';
 import ErrorMessage from '../../../components/ErrorMessage';
-import './Register.css';
+import styles from './Register.module.scss';
 
 export const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -13,7 +14,8 @@ export const Register: React.FC = () => {
     confirmPassword: ''
   });
   const [error, setError] = useState('');
-  const { register, isAuthenticated, error: authError, loading } = useAuth();
+  const dispatch = useAppDispatch();
+  const { isAuthenticated, isLoading, errorMessage } = useAppSelector(state => state.auth);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,7 +38,7 @@ export const Register: React.FC = () => {
     }
 
     try {
-      await register(formData.name, formData.email, formData.password);
+      dispatch(registerUser(formData));
       navigate('/auth/login');
     } catch (err) {
       console.error('Registration failed:', err);
@@ -52,20 +54,20 @@ export const Register: React.FC = () => {
     setError('');
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
+  if (isLoading) {
+    return <div className={styles.loading}>Loading...</div>;
   }
 
-  const errorMessage = error || authError || '';
+  const errorMessageToDisplay = error || errorMessage || '';
 
   return (
-    <div className="register-container">
-      <div className="register-card">
-        <h1>Create Account</h1>
-        {errorMessage && <ErrorMessage message={errorMessage} />}
-        <form onSubmit={handleSubmit} className="register-form">
-          <div className="form-group">
-            <label htmlFor="name">Name</label>
+    <div className={styles.authContainer}>
+      <div className={styles.form}>
+        <h1 className={styles.title}>Create Account</h1>
+        {errorMessageToDisplay && <ErrorMessage message={errorMessageToDisplay} />}
+        <form onSubmit={handleSubmit}>
+          <div className={styles.formGroup}>
+            <label htmlFor="name" className={styles.label}>Name</label>
             <input
               type="text"
               id="name"
@@ -74,10 +76,11 @@ export const Register: React.FC = () => {
               onChange={handleChange}
               required
               minLength={3}
+              className={styles.input}
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
+          <div className={styles.formGroup}>
+            <label htmlFor="email" className={styles.label}>Email</label>
             <input
               type="email"
               id="email"
@@ -85,10 +88,11 @@ export const Register: React.FC = () => {
               value={formData.email}
               onChange={handleChange}
               required
+              className={styles.input}
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
+          <div className={styles.formGroup}>
+            <label htmlFor="password" className={styles.label}>Password</label>
             <input
               type="password"
               id="password"
@@ -97,10 +101,11 @@ export const Register: React.FC = () => {
               onChange={handleChange}
               required
               minLength={6}
+              className={styles.input}
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password</label>
+          <div className={styles.formGroup}>
+            <label htmlFor="confirmPassword" className={styles.label}>Confirm Password</label>
             <input
               type="password"
               id="confirmPassword"
@@ -108,13 +113,14 @@ export const Register: React.FC = () => {
               value={formData.confirmPassword}
               onChange={handleChange}
               required
+              className={styles.input}
             />
           </div>
-          <Button type="submit" primary disabled={loading}>
-            {loading ? 'Creating Account...' : 'Register'}
+          <Button type="submit" primary disabled={isLoading} className={styles.submitButton}>
+            {isLoading ? 'Creating Account...' : 'Register'}
           </Button>
         </form>
-        <div className="login-link">
+        <div className={styles.loginLink}>
           Already have an account? <Link to="/auth/login">Login</Link>
         </div>
       </div>
