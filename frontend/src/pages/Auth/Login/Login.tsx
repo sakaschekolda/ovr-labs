@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAppDispatch, useAppSelector } from '../../../app/hooks';
+import { loginUser } from '../../../features/auth/authThunks';
 import Button from '../../../components/Button';
 import ErrorMessage from '../../../components/ErrorMessage';
-import './Login.css';
+import styles from './Login.module.scss';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isAuthenticated, error: authError, loading } = useAuth();
+  const dispatch = useAppDispatch();
+  const { isAuthenticated, isLoading, isError, errorMessage } = useAppSelector(state => state.auth);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -20,50 +22,48 @@ export const Login: React.FC = () => {
     }
   }, [isAuthenticated, navigate, from]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await login(email, password);
-    } catch (err) {
-      console.error('Login failed:', err);
-    }
+    dispatch(loginUser({ email, password }));
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
+  if (isLoading) {
+    return <div className={styles.loading}>Loading...</div>;
   }
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h1>Login</h1>
-        {authError && <ErrorMessage message={authError} />}
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
+    <div className={styles.authContainer}>
+      <div className={styles.form}>
+        <h1 className={styles.title}>Login</h1>
+        {isError && <ErrorMessage message={errorMessage || ''} />}
+        <form onSubmit={handleSubmit}>
+          <div className={styles.formGroup}>
+            <label htmlFor="email" className={styles.label}>Email</label>
             <input
               type="email"
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              className={styles.input}
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
+          <div className={styles.formGroup}>
+            <label htmlFor="password" className={styles.label}>Password</label>
             <input
               type="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              className={styles.input}
             />
           </div>
-          <Button type="submit" primary disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
+          <Button type="submit" primary disabled={isLoading} className={styles.submitButton}>
+            {isLoading ? 'Logging in...' : 'Login'}
           </Button>
         </form>
-        <div className="register-link">
+        <div className={styles.registerLink}>
           Don't have an account? <Link to="/auth/register">Register</Link>
         </div>
       </div>

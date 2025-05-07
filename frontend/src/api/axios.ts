@@ -2,8 +2,6 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-console.log('API URL:', API_URL); // Добавляем логирование для отладки
-
 export const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -11,7 +9,7 @@ export const api = axios.create({
   },
 });
 
-// Добавляем интерцептор для автоматического добавления токена
+// Request interceptor for token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -20,13 +18,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Добавляем интерцептор для обработки ошибок авторизации
+// Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Clear token and redirect to login on unauthorized
       localStorage.removeItem('token');
-      localStorage.removeItem('auth_token_expiry');
+      window.location.href = '/auth/login';
     }
     return Promise.reject(error);
   }

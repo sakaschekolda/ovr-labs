@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/no-empty-object-type */
 import { Request, Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import User from '@models/User.js';
-import { UnauthorizedError } from '@utils/errors.js';
+import User from '../models/User';
+import { UnauthorizedError } from '../utils/errors';
 import 'dotenv/config';
 
 declare global {
@@ -32,10 +32,14 @@ export const authenticateToken = async (
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
+  console.log('Auth middleware - Request headers:', req.headers);
   const authHeader: string | undefined = req.headers['authorization'];
+  console.log('Auth middleware - Authorization header:', authHeader);
   const token: string | undefined = authHeader?.split(' ')[1];
+  console.log('Auth middleware - Token:', token);
 
   if (!token) {
+    console.log('Auth middleware - No token provided');
     return next(
       new UnauthorizedError('No authentication token provided. Access denied.'),
     );
@@ -43,26 +47,31 @@ export const authenticateToken = async (
 
   try {
     const decoded = jwt.verify(token, jwtSecret) as DecodedPayload;
+    console.log('Auth middleware - Decoded token:', decoded);
 
     if (
       typeof decoded !== 'object' ||
       decoded === null ||
       typeof decoded.id !== 'number'
     ) {
+      console.log('Auth middleware - Invalid token payload');
       throw new Error(
         'Invalid token payload: ID is missing, not a number, or payload is not an object.',
       );
     }
 
     const user: User | null = await User.findByPk(decoded.id);
+    console.log('Auth middleware - Found user:', user?.id);
 
     if (!user) {
+      console.log('Auth middleware - User not found');
       return next(new UnauthorizedError('Invalid token: User not found.'));
     }
 
     req.user = user;
     next();
   } catch (error: unknown) {
+    console.error('Auth middleware - Error:', error);
     if (error instanceof Error) {
       if (error.name === 'TokenExpiredError') {
         return next(
