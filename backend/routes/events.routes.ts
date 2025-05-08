@@ -138,13 +138,6 @@ router.post(
         );
       }
 
-      if (user.role !== 'admin') {
-        throw new ValidationError(
-          { auth: 'Only administrators can create events' },
-          'Event creation failed.',
-        );
-      }
-
       const validationErrors: Record<string, string> = {};
       if (!title) validationErrors.title = 'Title is required';
       if (!date) validationErrors.date = 'Date is required';
@@ -294,7 +287,7 @@ router.put(
 
 /**
  * @swagger
- * /events/{id}:
+ * /api/events/{id}:
  *   delete:
  *     summary: Delete an event by its ID (Requires Authentication & Ownership)
  *     tags: [Protected Routes]
@@ -347,11 +340,27 @@ router.delete(
     async (req, res, next) => {
       try {
         const { id } = req.params;
+        const user = req.user as User | undefined;
+
+        if (!user) {
+          throw new ValidationError(
+            { auth: 'User not authenticated' },
+            'Event deletion failed.',
+          );
+        }
+
         const event = await Event.findByPk(id);
 
         if (!event) {
           throw new ValidationError(
             { id: 'Event not found' },
+            'Event deletion failed.',
+          );
+        }
+
+        if (event.created_by !== user.id && user.role !== 'admin') {
+          throw new ValidationError(
+            { auth: 'You do not have permission to delete this event' },
             'Event deletion failed.',
           );
         }

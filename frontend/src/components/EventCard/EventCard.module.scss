@@ -1,0 +1,55 @@
+.eventCard {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: 1.5px solid #e0e0e0;
+  margin-bottom: 1rem;
+}
+
+.eventContent {
+  flex: 1;
+}
+
+.eventCategory {
+  color: #b71c1c;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.eventDate {
+  color: #333;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.eventLocation {
+  color: #333;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.eventParticipants {
+  color: #666;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.eventDescription {
+  color: #444;
+  margin-bottom: 0.5rem;
+}
+
+.eventCreator {
+  color: #888;
+  font-size: 0.95em;
+}
+
+.eventActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+} 

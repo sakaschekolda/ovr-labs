@@ -9,8 +9,6 @@ export interface EventFormValues {
   description: string;
   date: string;
   category: string;
-  location: string;
-  maxParticipants: number;
   // image?: FileList;
 }
 
@@ -32,8 +30,6 @@ const schema = yup.object({
       return new Date(value) >= new Date(new Date().toDateString());
     }),
   category: yup.string().required('Категория обязательна'),
-  location: yup.string().required('Локация обязательна').max(200, 'Максимум 200 символов'),
-  maxParticipants: yup.number().required('Укажите максимальное число участников').min(1, 'Минимум 1').max(10000, 'Максимум 10000'),
   // image: yup.mixed().notRequired(),
 });
 
@@ -44,7 +40,7 @@ interface Props {
   error?: string | null;
 }
 
-const EventForm = ({ event, onSubmit, isLoading, error }: Props) => {
+const EventForm: React.FC<Props> = ({ event, onSubmit, isLoading, error }) => {
   const { register, handleSubmit, formState: { errors }, reset } = useForm<EventFormValues>({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -52,8 +48,6 @@ const EventForm = ({ event, onSubmit, isLoading, error }: Props) => {
       description: '',
       date: new Date().toISOString().slice(0, 16),
       category: '',
-      location: '',
-      maxParticipants: 1,
       ...event,
     },
   });
@@ -68,25 +62,42 @@ const EventForm = ({ event, onSubmit, isLoading, error }: Props) => {
   }, [event, reset]);
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
       <div className={styles.formGroup}>
-        <label>Название</label>
-        <input {...register('title')} />
+        <label htmlFor="title">Название</label>
+        <input
+          id="title"
+          type="text"
+          {...register('title', { required: 'Обязательное поле' })}
+        />
         {errors.title && <span className={styles.error}>{errors.title.message}</span>}
       </div>
+
       <div className={styles.formGroup}>
-        <label>Описание</label>
-        <textarea {...register('description')} />
+        <label htmlFor="description">Описание</label>
+        <textarea
+          id="description"
+          {...register('description', { required: 'Обязательное поле' })}
+        />
         {errors.description && <span className={styles.error}>{errors.description.message}</span>}
       </div>
+
       <div className={styles.formGroup}>
-        <label>Дата</label>
-        <input type="datetime-local" {...register('date')} />
+        <label htmlFor="date">Дата и время</label>
+        <input
+          id="date"
+          type="datetime-local"
+          {...register('date', { required: 'Обязательное поле' })}
+        />
         {errors.date && <span className={styles.error}>{errors.date.message}</span>}
       </div>
+
       <div className={styles.formGroup}>
-        <label>Категория</label>
-        <select {...register('category')}>
+        <label htmlFor="category">Категория</label>
+        <select
+          id="category"
+          {...register('category', { required: 'Обязательное поле' })}
+        >
           <option value="">Выберите категорию</option>
           {categories.map(cat => (
             <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -94,22 +105,9 @@ const EventForm = ({ event, onSubmit, isLoading, error }: Props) => {
         </select>
         {errors.category && <span className={styles.error}>{errors.category.message}</span>}
       </div>
-      <div className={styles.formGroup}>
-        <label>Локация</label>
-        <input {...register('location')} />
-        {errors.location && <span className={styles.error}>{errors.location.message}</span>}
-      </div>
-      <div className={styles.formGroup}>
-        <label>Максимальное число участников</label>
-        <input type="number" {...register('maxParticipants')} min={1} max={10000} />
-        {errors.maxParticipants && <span className={styles.error}>{errors.maxParticipants.message}</span>}
-      </div>
-      {/* <div className={styles.formGroup}>
-        <label>Картинка (опционально)</label>
-        <input type="file" {...register('image')} />
-      </div> */}
+
       {error && <div className={styles.error}>{error}</div>}
-      <button type="submit" disabled={isLoading}>{isLoading ? 'Сохраняем...' : 'Сохранить'}</button>
+      <button type="submit" disabled={isLoading}>{isLoading ? 'Сохранение...' : 'Сохранить'}</button>
     </form>
   );
 };

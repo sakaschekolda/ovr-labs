@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { RootState } from '../../app/store';
-import { fetchEvents, joinEventThunk, deleteEventThunk } from '../../features/events/eventsThunks';
+import { fetchEvents, deleteEventThunk } from '../../features/events/eventsThunks';
 import styles from './Events.module.scss';
 import ErrorNotification from '../../components/ErrorNotification';
 import { useNavigate } from 'react-router-dom';
+import EventCard from '../../components/EventCard/EventCard';
+import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
 
 const Events: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -15,6 +17,7 @@ const Events: React.FC = () => {
   const errorMessage = useAppSelector((state: RootState) => state.events.errorMessage);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const navigate = useNavigate();
+  const [eventToDelete, setEventToDelete] = useState<number | null>(null);
 
   const categories = ['all', 'concert', 'lecture', 'exhibition', 'master class', 'sport'];
 
@@ -28,12 +31,15 @@ const Events: React.FC = () => {
     return events.filter(event => event.category === selectedCategory);
   }, [selectedCategory, events]);
 
-  const handleJoinEvent = (eventId: string) => {
-    dispatch(joinEventThunk(eventId));
-  };
-
-  const handleDeleteEvent = (eventId: string) => {
-    dispatch(deleteEventThunk(eventId));
+  const handleDeleteEvent = async () => {
+    if (eventToDelete) {
+      try {
+        await dispatch(deleteEventThunk(String(eventToDelete))).unwrap();
+        setEventToDelete(null);
+      } catch (error) {
+        console.error('Ошибка при удалении:', error);
+      }
+    }
   };
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -55,6 +61,11 @@ const Events: React.FC = () => {
       default:
         return category;
     }
+  };
+
+  const handleEditEvent = (eventId: number) => {
+    console.log('Editing event:', eventId);
+    navigate(`/events/${eventId}/edit`, { state: { from: '/events' } });
   };
 
   if (isLoading) return <div className={styles.loading}>Загрузка...</div>;
@@ -89,42 +100,30 @@ const Events: React.FC = () => {
 
         <div className={styles.eventsGrid}>
           {filteredEvents.map(event => (
-            <div key={event.id} className={styles.eventCard}>
-              <h3>{event.title}</h3>
-              <p className={styles.category}>{getCategoryLabel(event.category)}</p>
-              <p className={styles.date}>{new Date(event.date).toLocaleDateString()}</p>
-              <p className={styles.location}>{event.location}</p>
-              <p className={styles.participants}>
-                Участники: {event.currentParticipants} / {event.maxParticipants}
-              </p>
-              <div className={styles.actions}>
-                <button
-                  onClick={() => handleJoinEvent(event.id)}
-                  className={styles.joinButton}
-                  disabled={event.currentParticipants >= event.maxParticipants}
-                >
-                  Присоединиться
-                </button>
-                {(user && (user.id === event.created_by || user.role === 'admin')) && (
-                  <button
-                    onClick={() => navigate(`/events/${event.id}/edit`)}
-                    className={styles.updateButton}
-                  >
-                    Редактировать
-                  </button>
-                )}
-                {user?.id === event.created_by && (
-                  <button
-                    onClick={() => handleDeleteEvent(event.id)}
-                    className={styles.deleteButton}
-                  >
-                    Удалить
-                  </button>
-                )}
-              </div>
-            </div>
+            <EventCard
+              key={Number(event.id)}
+              id={Number(event.id)}
+              title={event.title}
+              description={event.description}
+              date={event.date}
+              category={event.category}
+              creator={event.creator ? { ...event.creator, id: Number(event.creator.id) } : undefined}
+              created_by={Number(event.created_by)}
+              userId={user?.id ? Number(user.id) : undefined}
+              userRole={user?.role}
+              onEdit={handleEditEvent}
+              onDelete={() => setEventToDelete(Number(event.id))}
+            />
           ))}
         </div>
+
+        <ConfirmModal
+          isOpen={!!eventToDelete}
+          onConfirm={handleDeleteEvent}
+          onCancel={() => setEventToDelete(null)}
+          title="Подтверждение удаления"
+          message="Вы уверены, что хотите удалить мероприятие?"
+        />
       </div>
     </div>
   );

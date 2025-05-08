@@ -310,18 +310,22 @@
 .category-select {
   padding: 0.4rem 1rem;
   border-radius: 6px;
-  border: 1px solid #ccc;
+  border: 2px solid #b71c1c;
   font-size: 1rem;
   outline: none;
   transition: border-color 0.2s;
+  color: #333;
+  background: #fff;
+  font-weight: 600;
 }
 
 .category-select:hover {
-  border-color: #888;
+  border-color: #a31515;
 }
 
 .category-select:focus {
-  border-color: #007bff;
+  border-color: #b71c1c;
+  background: #fff;
 }
 
 .event-category {

@@ -6,6 +6,7 @@ import { Login } from './pages/Auth/Login/Login';
 import { Register } from './pages/Auth/Register/Register';
 import Profile from './pages/Profile/Profile';
 import NotFound from './pages/NotFound/NotFound';
+import EventFormPage from './pages/Events/EventFormPage';
 import './App.css';
 
 function App() {
@@ -18,6 +19,22 @@ function App() {
           element={
             <ProtectedRoute>
               <Events />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/events/create"
+          element={
+            <ProtectedRoute>
+              <EventFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/events/:id/edit"
+          element={
+            <ProtectedRoute>
+              <EventFormPage />
             </ProtectedRoute>
           }
         />
