@@ -6,8 +6,10 @@ export const fetchEvents = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const response = await api.get('/api/events');
-      return response.data;
+      console.log('Events response:', response.data);
+      return response.data.data;
     } catch (error: any) {
+      console.error('Error fetching events:', error);
       return thunkAPI.rejectWithValue(error.response?.data?.message || 'Ошибка загрузки событий');
     }
   }

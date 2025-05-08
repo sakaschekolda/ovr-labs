@@ -1,6 +1,12 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { fetchEvents, joinEventThunk, deleteEventThunk } from './eventsThunks';
 
+interface Creator {
+  id: string;
+  name: string;
+  role: string;
+}
+
 export interface Event {
   id: string;
   title: string;
@@ -10,6 +16,9 @@ export interface Event {
   location: string;
   currentParticipants: number;
   maxParticipants: number;
+  created_by: string;
+  created_at: string;
+  creator?: Creator;
 }
 
 interface EventsState {
@@ -39,7 +48,7 @@ const eventsSlice = createSlice({
       })
       .addCase(fetchEvents.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.events = action.payload;
+        state.events = Array.isArray(action.payload) ? action.payload : [];
         state.isError = false;
         state.errorMessage = null;
       })
