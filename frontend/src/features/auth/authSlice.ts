@@ -22,18 +22,25 @@ interface AuthState {
   errorMessage: string | null;
 }
 
-const initialState: AuthState = {
-  user: null,
-  token: null,
-  isAuthenticated: false,
-  isLoading: false,
-  isError: false,
-  errorMessage: null
+// Получаем начальное состояние из localStorage
+const getInitialState = (): AuthState => {
+  const token = localStorage.getItem('token');
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+
+  return {
+    user,
+    token,
+    isAuthenticated: !!(token && user),
+    isLoading: false,
+    isError: false,
+    errorMessage: null
+  };
 };
 
 const authSlice = createSlice({
   name: 'auth',
-  initialState,
+  initialState: getInitialState(),
   reducers: {
     setAuth: (state, action: PayloadAction<AuthResponse>) => {
       state.user = action.payload.user;
@@ -41,6 +48,10 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.isError = false;
       state.errorMessage = null;
+      
+      // Сохраняем в localStorage
+      localStorage.setItem('token', action.payload.token);
+      localStorage.setItem('user', JSON.stringify(action.payload.user));
     },
     clearAuth: (state) => {
       state.user = null;
@@ -48,6 +59,10 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.isError = false;
       state.errorMessage = null;
+      
+      // Очищаем localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
     },
     setError: (state, action: PayloadAction<string>) => {
       state.isError = true;
@@ -66,6 +81,10 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.user = action.payload.user;
         state.token = action.payload.token;
+        
+        // Сохраняем в localStorage
+        localStorage.setItem('token', action.payload.token);
+        localStorage.setItem('user', JSON.stringify(action.payload.user));
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
@@ -89,6 +108,10 @@ const authSlice = createSlice({
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;
+        
+        // Очищаем localStorage
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       });
   }
 });

@@ -1,10 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../app/hooks';
+import { RootState } from '../../../app/store';
 import { registerUser } from '../../../features/auth/authThunks';
 import Button from '../../../components/Button';
-import ErrorMessage from '../../../components/ErrorMessage';
+import ErrorNotification from '../../../components/ErrorNotification';
 import styles from './Register.module.scss';
+
+const Spinner = () => (
+  <span style={{
+    display: 'inline-block',
+    width: 18,
+    height: 18,
+    border: '2px solid #b71c1c',
+    borderTop: '2px solid transparent',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+    verticalAlign: 'middle',
+    marginRight: 8
+  }} />
+);
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 export const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -13,9 +32,10 @@ export const Register: React.FC = () => {
     password: '',
     confirmPassword: ''
   });
-  const [error, setError] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [customError, setCustomError] = useState('');
   const dispatch = useAppDispatch();
-  const { isAuthenticated, isLoading, errorMessage } = useAppSelector(state => state.auth);
+  const { isAuthenticated, isLoading, errorMessage } = useAppSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,25 +44,33 @@ export const Register: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
+  useEffect(() => {
+    if (errorMessage) {
+      setShowError(true);
+      setCustomError('');
+    }
+  }, [errorMessage]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    if (!isValidEmail(formData.email)) {
+      setShowError(true);
+      setCustomError('Введите корректный email');
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setShowError(true);
+      setCustomError('Пароли не совпадают');
       return;
     }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    if (formData.password.length < 8) {
+      setShowError(true);
+      setCustomError('Пароль должен быть не менее 8 символов');
       return;
     }
-
-    try {
-      dispatch(registerUser(formData));
-      navigate('/auth/login');
-    } catch (err) {
-      console.error('Registration failed:', err);
-    }
+    setCustomError('');
+    dispatch(registerUser(formData));
+    // Не делаем navigate сразу, только после успешной регистрации
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,79 +79,87 @@ export const Register: React.FC = () => {
       ...prev,
       [name]: value
     }));
-    setError('');
+    setCustomError('');
   };
 
-  if (isLoading) {
-    return <div className={styles.loading}>Loading...</div>;
-  }
-
-  const errorMessageToDisplay = error || errorMessage || '';
-
   return (
-    <div className={styles.authContainer}>
-      <div className={styles.form}>
-        <h1 className={styles.title}>Create Account</h1>
-        {errorMessageToDisplay && <ErrorMessage message={errorMessageToDisplay} />}
-        <form onSubmit={handleSubmit}>
-          <div className={styles.formGroup}>
-            <label htmlFor="name" className={styles.label}>Name</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              minLength={3}
-              className={styles.input}
-            />
+    <>
+      {showError && (
+        <ErrorNotification
+          message={customError || errorMessage || ''}
+          onClose={() => { setShowError(false); setCustomError(''); }}
+          duration={5000}
+        />
+      )}
+      <div className={styles.authContainer}>
+        <div className={styles.form}>
+          <h1 className={styles.title}>Create Account</h1>
+          <form onSubmit={handleSubmit} noValidate>
+            <div className={styles.formGroup}>
+              <label htmlFor="name" className={styles.label}>Name</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                minLength={3}
+                className={styles.input}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="email" className={styles.label}>Email</label>
+              <input
+                type="text"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                className={styles.input}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="password" className={styles.label}>Password</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                minLength={8}
+                className={styles.input}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="confirmPassword" className={styles.label}>Confirm Password</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                className={styles.input}
+              />
+            </div>
+            <Button type="submit" primary disabled={isLoading} className={styles.submitButton}>
+              {isLoading ? <Spinner /> : 'Register'}
+            </Button>
+          </form>
+          <div className={styles.loginLink}>
+            Already have an account? <Link to="/auth/login">Login</Link>
           </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="email" className={styles.label}>Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className={styles.input}
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="password" className={styles.label}>Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              minLength={6}
-              className={styles.input}
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="confirmPassword" className={styles.label}>Confirm Password</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              className={styles.input}
-            />
-          </div>
-          <Button type="submit" primary disabled={isLoading} className={styles.submitButton}>
-            {isLoading ? 'Creating Account...' : 'Register'}
-          </Button>
-        </form>
-        <div className={styles.loginLink}>
-          Already have an account? <Link to="/auth/login">Login</Link>
         </div>
       </div>
-    </div>
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </>
   );
 }; 

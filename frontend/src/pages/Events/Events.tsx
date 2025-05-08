@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { RootState } from '../../app/store';
 import { logoutUser } from '../../features/auth/authThunks';
 import { fetchEvents, joinEventThunk, deleteEventThunk } from '../../features/events/eventsThunks';
 import styles from './Events.module.scss';
+import ErrorNotification from '../../components/ErrorNotification';
 
 const Events: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const user = useAppSelector(state => state.auth.user);
-  const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
-  const events = useAppSelector(state => state.events.events);
-  const isLoading = useAppSelector(state => state.events.isLoading);
-  const isError = useAppSelector(state => state.events.isError);
-  const errorMessage = useAppSelector(state => state.events.errorMessage);
+  const user = useAppSelector((state: RootState) => state.auth.user);
+  const isAuthenticated = useAppSelector((state: RootState) => state.auth.isAuthenticated);
+  const events = useAppSelector((state: RootState) => state.events.events) || [];
+  const isLoading = useAppSelector((state: RootState) => state.events.isLoading);
+  const isError = useAppSelector((state: RootState) => state.events.isError);
+  const errorMessage = useAppSelector((state: RootState) => state.events.errorMessage);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const categories = ['all', 'concert', 'lecture', 'exhibition', 'master class', 'sport'];
@@ -23,6 +25,7 @@ const Events: React.FC = () => {
   }, [dispatch]);
 
   const filteredEvents = React.useMemo(() => {
+    if (!Array.isArray(events)) return [];
     if (selectedCategory === 'all') return events;
     return events.filter(event => event.category === selectedCategory);
   }, [selectedCategory, events]);
@@ -61,7 +64,7 @@ const Events: React.FC = () => {
   };
 
   if (isLoading) return <div className={styles.loading}>Загрузка...</div>;
-  if (isError) return <div className={styles.error}>{errorMessage}</div>;
+  if (isError) return <ErrorNotification message={errorMessage || 'Неизвестная ошибка'} />;
 
   return (
     <div className={styles.eventsPage}>

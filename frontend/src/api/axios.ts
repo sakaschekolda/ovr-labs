@@ -23,9 +23,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear token and redirect to login on unauthorized
-      localStorage.removeItem('token');
-      window.location.href = '/auth/login';
+      // localStorage.removeItem('token');
+      // localStorage.removeItem('user');
+      // НЕ делаем window.location.href = ...
+      // Logout обрабатывается через Redux
     }
     return Promise.reject(error);
   }
