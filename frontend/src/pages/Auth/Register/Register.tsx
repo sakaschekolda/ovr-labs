@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../app/hooks';
 import { RootState } from '../../../app/store';
 import { registerUser } from '../../../features/auth/authThunks';
@@ -37,12 +37,15 @@ export const Register: React.FC = () => {
   const dispatch = useAppDispatch();
   const { isAuthenticated, isLoading, errorMessage } = useAppSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = location.state?.from?.pathname === '/events' ? '/events' : '/';
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/events');
+      navigate(from, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, from]);
 
   useEffect(() => {
     if (errorMessage) {

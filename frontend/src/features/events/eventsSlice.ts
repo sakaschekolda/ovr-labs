@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { fetchEvents, joinEventThunk, deleteEventThunk } from './eventsThunks';
+import { fetchEvents, fetchUserEvents, joinEventThunk, deleteEventThunk } from './eventsThunks';
 
 interface Creator {
   id: string;
@@ -23,6 +23,7 @@ export interface Event {
 
 interface EventsState {
   events: Event[];
+  userEvents: Event[];
   isLoading: boolean;
   isError: boolean;
   errorMessage: string | null;
@@ -30,6 +31,7 @@ interface EventsState {
 
 const initialState: EventsState = {
   events: [],
+  userEvents: [],
   isLoading: false,
   isError: false,
   errorMessage: null,
@@ -56,6 +58,22 @@ const eventsSlice = createSlice({
         state.isLoading = false;
         state.isError = true;
         state.errorMessage = action.payload as string || 'Ошибка загрузки событий';
+      })
+      .addCase(fetchUserEvents.pending, (state) => {
+        state.isLoading = true;
+        state.isError = false;
+        state.errorMessage = null;
+      })
+      .addCase(fetchUserEvents.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.userEvents = Array.isArray(action.payload) ? action.payload : [];
+        state.isError = false;
+        state.errorMessage = null;
+      })
+      .addCase(fetchUserEvents.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.errorMessage = action.payload as string || 'Ошибка загрузки событий пользователя';
       })
       .addCase(joinEventThunk.pending, (state) => {
         state.isLoading = true;

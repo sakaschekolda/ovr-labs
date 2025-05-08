@@ -21,6 +21,7 @@ import mainApiRouter from '@routes/index';
 import authRoutes from '@routes/auth.routes';
 import publicRoutes from '@routes/public';
 import * as schemas from './swagger/schemas';
+import profileRoutes from './routes/profileRoutes';
 
 const requiredEnvDb: string[] = [
   'DB_NAME',
@@ -197,6 +198,7 @@ app.use(errorMiddleware);
 app.use('/api/auth', authRoutes);
 app.use('/api', publicRoutes);
 app.use('/api', mainApiRouter);
+app.use('/api/profile', profileRoutes);
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   if (!res.headersSent) {

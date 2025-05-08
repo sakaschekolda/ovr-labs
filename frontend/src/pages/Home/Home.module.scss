@@ -1,46 +1,63 @@
-.home-container {
+.homeContainer {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-.home-header {
+.homeHeader {
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
-  background-color: #f8f9fa;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.logo h1 {
-  margin: 0;
-  color: #333;
-  font-size: 1.5rem;
+.logo {
+  h1 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+    margin: 0;
+  }
 }
 
-.auth-nav {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.auth-buttons {
-  display: flex;
-  gap: 1rem;
-}
-
-.user-info {
+.authNav {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.user-info span {
-  color: #666;
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  span {
+    color: #333;
+    font-size: 1rem;
+    margin-right: 0.5rem;
+  }
+
+  button {
+    min-width: 100px;
+  }
 }
 
-.home-content {
+.authButtons {
+  display: flex;
+  gap: 1rem;
+
+  a {
+    text-decoration: none;
+  }
+
+  button {
+    min-width: 100px;
+  }
+}
+
+.homeContent {
   flex: 1;
   padding: 2rem;
   max-width: 1200px;
@@ -48,62 +65,86 @@
   width: 100%;
 }
 
-.hero-section {
+.heroSection {
   text-align: center;
   padding: 4rem 0;
+  margin-bottom: 4rem;
+
+  h2 {
+    font-size: 2.5rem;
+    color: #333;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    font-size: 1.2rem;
+    color: #666;
+    max-width: 600px;
+    margin: 0 auto 2rem;
+  }
 }
 
-.hero-section h2 {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-  color: #333;
-}
-
-.hero-section p {
-  font-size: 1.2rem;
-  color: #666;
-  max-width: 800px;
-  margin: 0 auto 2rem;
-}
-
-.cta-buttons {
+.ctaButtons {
   display: flex;
-  gap: 1rem;
   justify-content: center;
+  gap: 1rem;
 }
 
-.features-section {
-  padding: 4rem 0;
+.featuresSection {
+  padding: 2rem 0;
+
+  h3 {
+    text-align: center;
+    font-size: 2rem;
+    color: #333;
+    margin-bottom: 2rem;
+  }
 }
 
-.features-section h3 {
-  text-align: center;
-  font-size: 2rem;
-  margin-bottom: 2rem;
-  color: #333;
-}
-
-.features-grid {
+.featuresGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 2rem;
+  padding: 0 1rem;
 }
 
-.feature-card {
+.featureCard {
+  background: #fff;
   padding: 2rem;
-  background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   text-align: center;
+
+  h4 {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    color: #666;
+    line-height: 1.6;
+  }
 }
 
-.feature-card h4 {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-  color: #333;
-}
+@media (max-width: 768px) {
+  .homeHeader {
+    padding: 1rem;
+  }
 
-.feature-card p {
-  color: #666;
-  line-height: 1.6;
+  .homeContent {
+    padding: 1rem;
+  }
+
+  .heroSection {
+    padding: 2rem 0;
+
+    h2 {
+      font-size: 2rem;
+    }
+  }
+
+  .featuresGrid {
+    grid-template-columns: 1fr;
+  }
 } 
