@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../app/hooks';
 import { RootState } from '../../../app/store';
-import { registerUser } from '../../../features/auth/authThunks';
+import { registerUser, loginUser } from '../../../features/auth/authThunks';
 import Button from '../../../components/Button';
 import ErrorNotification from '../../../components/ErrorNotification';
 import styles from './Register.module.scss';
@@ -72,8 +72,16 @@ export const Register: React.FC = () => {
       return;
     }
     setCustomError('');
-    dispatch(registerUser(formData));
-    // Не делаем navigate сразу, только после успешной регистрации
+    try {
+      await dispatch(registerUser(formData)).unwrap();
+      await dispatch(loginUser({
+        email: formData.email,
+        password: formData.password
+      })).unwrap();
+      navigate(from, { replace: true });
+    } catch (error) {
+      console.error('Registration or login failed:', error);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

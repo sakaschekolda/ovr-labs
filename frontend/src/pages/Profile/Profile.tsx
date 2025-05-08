@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { RootState } from '../../app/store';
-import { fetchUserEvents } from '../../features/events/eventsThunks';
-import Button from '../../components/Button';
+import { fetchUserEvents, deleteEventThunk } from '../../features/events/eventsThunks';
 import ErrorNotification from '../../components/ErrorNotification';
+import EventCard from '../../components/EventCard/EventCard';
+import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
 import styles from './Profile.module.scss';
 
 const Spinner = () => (
@@ -26,29 +27,30 @@ const Profile = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAppSelector((state: RootState) => state.auth);
   const { userEvents, isLoading, isError, errorMessage } = useAppSelector((state: RootState) => state.events);
+  const [eventToDelete, setEventToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/auth/login');
       return;
     }
+    console.log('Profile: Fetching user events...');
     dispatch(fetchUserEvents());
   }, [dispatch, isAuthenticated, navigate]);
 
-  const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case 'concert':
-        return 'Концерт';
-      case 'lecture':
-        return 'Лекция';
-      case 'exhibition':
-        return 'Выставка';
-      case 'master class':
-        return 'Мастер-класс';
-      case 'sport':
-        return 'Спорт';
-      default:
-        return category;
+  useEffect(() => {
+    console.log('Profile: userEvents updated:', userEvents);
+  }, [userEvents]);
+
+  const handleDeleteEvent = async () => {
+    if (eventToDelete) {
+      try {
+        await dispatch(deleteEventThunk(String(eventToDelete))).unwrap();
+        setEventToDelete(null);
+        dispatch(fetchUserEvents());
+      } catch (error) {
+        console.error('Ошибка при удалении:', error);
+      }
     }
   };
 
@@ -97,26 +99,32 @@ const Profile = () => {
         ) : (
           <div className={styles.eventsGrid}>
             {userEvents.map(event => (
-              <div key={event.id} className={styles.eventCard}>
-                <div className={styles.eventContent}>
-                  <h3>{event.title}</h3>
-                  <p className={styles.eventCategory}>{getCategoryLabel(event.category)}</p>
-                  <p className={styles.eventDate}>{new Date(event.date).toLocaleDateString()}</p>
-                  <p className={styles.eventLocation}>{event.location}</p>
-                  <p className={styles.eventParticipants}>
-                    Участники: {event.currentParticipants} / {event.maxParticipants}
-                  </p>
-                </div>
-                <div className={styles.eventActions}>
-                  <Button onClick={() => navigate(`/events/${event.id}/edit`)}>
-                    Редактировать
-                  </Button>
-                </div>
-              </div>
+              <EventCard
+                key={Number(event.id)}
+                id={Number(event.id)}
+                title={event.title}
+                description={event.description}
+                date={event.date}
+                category={event.category}
+                creator={event.creator ? { ...event.creator, id: Number(event.creator.id) } : undefined}
+                created_by={Number(event.created_by)}
+                userId={user?.id ? Number(user.id) : undefined}
+                userRole={user?.role}
+                onEdit={() => navigate(`/events/${event.id}/edit`, { state: { from: '/profile' } })}
+                onDelete={() => setEventToDelete(Number(event.id))}
+              />
             ))}
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!eventToDelete}
+        onConfirm={handleDeleteEvent}
+        onCancel={() => setEventToDelete(null)}
+        title="Подтверждение удаления"
+        message="Вы уверены, что хотите удалить мероприятие?"
+      />
     </div>
   );
 };

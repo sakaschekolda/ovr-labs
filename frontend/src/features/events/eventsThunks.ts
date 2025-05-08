@@ -20,9 +20,15 @@ export const fetchUserEvents = createAsyncThunk(
   'events/fetchUserEvents',
   async (_, thunkAPI) => {
     try {
+      console.log('Fetching user events...');
       const response = await api.get(`/api/profile/events`);
-      return response.data.data;
+      console.log('User events response:', response.data);
+      // Ответ приходит в виде массива, а не объекта с полем data
+      const result = Array.isArray(response.data) ? response.data : [];
+      console.log('Returning result:', result);
+      return result;
     } catch (error: any) {
+      console.error('Error fetching user events:', error.response?.data || error);
       return thunkAPI.rejectWithValue(error.response?.data?.message || 'Ошибка загрузки событий пользователя');
     }
   }
@@ -45,7 +51,11 @@ export const deleteEventThunk = createAsyncThunk(
   async (eventId: string, thunkAPI) => {
     try {
       await api.delete(`/api/events/${eventId}`);
-      thunkAPI.dispatch(fetchEvents());
+      // Обновляем оба списка событий
+      await Promise.all([
+        thunkAPI.dispatch(fetchEvents()),
+        thunkAPI.dispatch(fetchUserEvents())
+      ]);
     } catch (error: any) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || 'Ошибка при удалении мероприятия');
     }
@@ -54,10 +64,14 @@ export const deleteEventThunk = createAsyncThunk(
 
 export const createEventThunk = createAsyncThunk(
   'events/createEvent',
-  async (eventData: EventFormValues & { created_by: string }, thunkAPI) => {
+  async (eventData: EventFormValues & { created_by: number }, thunkAPI) => {
     try {
       const response = await api.post('/api/events', eventData);
-      thunkAPI.dispatch(fetchEvents());
+      // Обновляем оба списка событий
+      await Promise.all([
+        thunkAPI.dispatch(fetchEvents()),
+        thunkAPI.dispatch(fetchUserEvents())
+      ]);
       return response.data.data;
     } catch (error: any) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || 'Ошибка создания мероприятия');
@@ -70,11 +84,25 @@ export const updateEventThunk = createAsyncThunk(
   async (payload: { id: string; } & EventFormValues, thunkAPI) => {
     const { id, ...eventData } = payload;
     try {
+      console.log('Updating event with data:', { id, ...eventData });
       const response = await api.put(`/api/events/${id}`, eventData);
-      thunkAPI.dispatch(fetchEvents());
+      console.log('Update response:', response.data);
+      
+      // Обновляем оба списка событий
+      await Promise.all([
+        thunkAPI.dispatch(fetchEvents()),
+        thunkAPI.dispatch(fetchUserEvents())
+      ]);
+      
+      // Возвращаем обновленное событие
       return response.data.data;
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(error.response?.data?.message || 'Ошибка обновления мероприятия');
+      console.error('Error updating event:', error.response?.data || error);
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        'Ошибка обновления мероприятия'
+      );
     }
   }
 ); 

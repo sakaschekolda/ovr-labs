@@ -8,6 +8,8 @@
   padding: 32px 24px;
   border-radius: 12px;
   box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  color: #333;
+  font-family: inherit;
 }
 
 .formGroup {
@@ -17,21 +19,24 @@
 }
 
 label {
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: 2px;
+  color: #333;
 }
 
 input, textarea, select {
   padding: 8px 10px;
-  border: 1px solid #bdbdbd;
+  border: 1.5px solid #b71c1c;
   border-radius: 6px;
   font-size: 1rem;
-  background: #fafafa;
+  background: #fff;
+  color: #333;
   transition: border 0.2s;
+  font-family: inherit;
 }
 
 input:focus, textarea:focus, select:focus {
-  border: 1.5px solid #b71c1c;
+  border: 2px solid #a31515;
   outline: none;
 }
 
