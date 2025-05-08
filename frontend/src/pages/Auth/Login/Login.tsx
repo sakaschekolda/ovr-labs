@@ -35,7 +35,7 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || '/events';
+  const from = location.state?.from?.pathname === '/events' ? '/events' : '/';
 
   useEffect(() => {
     if (isAuthenticated) {

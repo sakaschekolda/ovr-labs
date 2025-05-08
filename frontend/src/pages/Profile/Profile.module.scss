@@ -1,0 +1,125 @@
+.profileContainer {
+  min-height: 100vh;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.profileHeader {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+
+  h1 {
+    color: #333;
+    margin-bottom: 1.5rem;
+    font-size: 2rem;
+  }
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.infoItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  .label {
+    font-weight: 600;
+    color: #666;
+    min-width: 80px;
+  }
+
+  .value {
+    color: #333;
+  }
+}
+
+.eventsSection {
+  h2 {
+    color: #333;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+  }
+}
+
+.noEvents {
+  text-align: center;
+  color: #666;
+  padding: 2rem;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.eventsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.eventCard {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.eventContent {
+  flex: 1;
+
+  h3 {
+    color: #333;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+  }
+}
+
+.eventCategory {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.eventDate {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.eventLocation {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.eventParticipants {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.eventActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  font-size: 1.2rem;
+  color: #666;
+  padding: 2rem;
+} 

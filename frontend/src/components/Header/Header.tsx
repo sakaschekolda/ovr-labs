@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { logout } from '../../features/auth/authSlice';
+import { logoutUser } from '../../features/auth/authThunks';
 import Button from '../Button';
 import './Header.css';
 
@@ -12,7 +12,7 @@ const Header: React.FC = () => {
   const dispatch = useAppDispatch();
 
   const handleLogout = () => {
-    dispatch(logout());
+    dispatch(logoutUser());
   };
 
   return (
@@ -26,6 +26,9 @@ const Header: React.FC = () => {
             <>
               <div className="user-info">
                 <span className="user-name">{user?.name}</span>
+                <Button variant="secondary" onClick={() => navigate('/profile')}>
+                  Профиль
+                </Button>
               </div>
               <Button variant="secondary" onClick={handleLogout}>
                 Выйти

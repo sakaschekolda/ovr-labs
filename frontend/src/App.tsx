@@ -4,6 +4,7 @@ import { Home } from './pages/Home/Home';
 import Events from './pages/Events/Events';
 import { Login } from './pages/Auth/Login/Login';
 import { Register } from './pages/Auth/Register/Register';
+import Profile from './pages/Profile/Profile';
 import NotFound from './pages/NotFound/NotFound';
 import './App.css';
 
@@ -17,6 +18,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Events />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />

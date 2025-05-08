@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { logoutUser } from '../../features/auth/authThunks';
 import Button from '../../components/Button';
@@ -8,9 +8,18 @@ export const Home = () => {
   const user = useAppSelector(state => state.auth.user);
   const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     dispatch(logoutUser());
+  };
+
+  const handleBrowseEvents = () => {
+    if (isAuthenticated) {
+      navigate('/events');
+    } else {
+      navigate('/auth/login', { state: { from: { pathname: '/events' } } });
+    }
   };
 
   return (
@@ -18,16 +27,18 @@ export const Home = () => {
       {/* Header */}
       <header className={styles.homeHeader}>
         <div className={styles.logo}>
-          <h1>Event Manager</h1>
+          <h1>EventHub</h1>
         </div>
         <nav className={styles.authNav}>
           {isAuthenticated ? (
             <div className={styles.userInfo}>
-              <span>Welcome, {user?.name}</span>
-              <Link to="/events">
-                <Button>Events</Button>
-              </Link>
-              <Button variant="secondary" onClick={handleLogout}>Выйти</Button>
+              <span>Добро пожаловать, {user?.name}</span>
+              <Button variant="secondary" onClick={() => navigate('/profile')}>
+                Профиль
+              </Button>
+              <Button variant="secondary" onClick={handleLogout}>
+                Выйти
+              </Button>
             </div>
           ) : (
             <div className={styles.authButtons}>
@@ -45,39 +56,30 @@ export const Home = () => {
       {/* Main Content */}
       <main className={styles.homeContent}>
         <section className={styles.heroSection}>
-          <h2>Welcome to Event Manager</h2>
+          <h2>EventHub</h2>
           <p>
-            Event Manager is your all-in-one solution for organizing and managing events.
-            Create, join, and manage events with ease. Whether you're planning a small
-            gathering or a large conference, our platform has you covered.
+            EventHub - полноценное решение для организации и управления мероприятиями.
           </p>
           
-          {!isAuthenticated && (
-            <div className={styles.ctaButtons}>
-              <Link to="/auth/register">
-                <Button variant="primary">Get Started</Button>
-              </Link>
-              <Link to="/events">
-                <Button>Browse Events</Button>
-              </Link>
-            </div>
-          )}
+          <div className={styles.ctaButtons}>
+            <Button onClick={handleBrowseEvents}>Посмотреть мероприятия</Button>
+          </div>
         </section>
 
         <section className={styles.featuresSection}>
-          <h3>Key Features</h3>
+          <h3>Ключевые функции</h3>
           <div className={styles.featuresGrid}>
             <div className={styles.featureCard}>
-              <h4>Create Events</h4>
-              <p>Easily create and manage your own events with our intuitive interface.</p>
+              <h4>Создание мероприятия</h4>
+              <p>Легко создавайте и управляйте своими мероприятиями.</p>
             </div>
             <div className={styles.featureCard}>
-              <h4>Join Events</h4>
-              <p>Discover and join events that interest you with just a few clicks.</p>
+              <h4>Присоединяйтесь к мероприятиям</h4>
+              <p>Находите и присоединяйтесь к мероприятиям по вашим интересам в пару кликов.</p>
             </div>
             <div className={styles.featureCard}>
-              <h4>Manage Participants</h4>
-              <p>Keep track of event participants and manage attendance efficiently.</p>
+              <h4>Управляйте участниками</h4>
+              <p>Отслеживайте участников мероприятия и эффективно управляйте посещаемостью.</p>
             </div>
           </div>
         </section>
