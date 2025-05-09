@@ -117,14 +117,16 @@ export const getAllEvents = async (
       where.category = category;
     }
 
-    const orderOption: Order = [['date', 'ASC']];
-
     const findOptions: FindOptions<Event> = {
       where,
       include: [
-        { model: User, as: 'creator', attributes: ['id', 'name', 'role'] },
+        { 
+          model: User, 
+          as: 'creator', 
+          attributes: ['id', 'firstName', 'lastName', 'middleName', 'role'] 
+        },
       ],
-      order: orderOption,
+      order: [['createdAt', 'DESC']],
     };
 
     const events: Event[] = await Event.findAll(findOptions);
@@ -175,7 +177,11 @@ export const getEventById = async (
 
     const event: Event | null = await Event.findByPk(eventId, {
       include: [
-        { model: User, as: 'creator', attributes: ['id', 'name', 'role'] },
+        { 
+          model: User, 
+          as: 'creator', 
+          attributes: ['id', 'firstName', 'lastName', 'middleName', 'role'] 
+        },
       ],
     });
 
@@ -261,7 +267,11 @@ export const createEvent = async (
       event.id,
       {
         include: [
-          { model: User, as: 'creator', attributes: ['id', 'name', 'role'] },
+          { 
+            model: User, 
+            as: 'creator', 
+            attributes: ['id', 'firstName', 'lastName', 'middleName', 'role'] 
+          },
         ],
       },
     );
@@ -405,7 +415,11 @@ export const updateEvent = async (
 
     const updatedEvent = await Event.findByPk(eventId, {
       include: [
-        { model: User, as: 'creator', attributes: ['id', 'name', 'role'] },
+        { 
+          model: User, 
+          as: 'creator', 
+          attributes: ['id', 'firstName', 'lastName', 'middleName', 'role'] 
+        },
       ],
     });
 

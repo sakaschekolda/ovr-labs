@@ -34,7 +34,7 @@ interface EventAttributesForModel {
   date: Date;
   category: EventCategory;
   created_by: ForeignKey<User['id']>;
-  created_at: Date;
+  createdAt: Date;
 }
 
 class Event extends Model<
@@ -47,7 +47,7 @@ class Event extends Model<
   declare date: Date;
   declare category: EventCategory;
   declare created_by: ForeignKey<User['id']>;
-  declare readonly created_at: CreationOptional<Date>;
+  declare readonly createdAt: CreationOptional<Date>;
 
   declare readonly creator?: NonAttribute<User>;
 
@@ -110,7 +110,7 @@ class Event extends Model<
             isInt: { msg: 'Creator ID must be an integer.' },
           },
         },
-        created_at: {
+        createdAt: {
           type: DataTypes.DATE,
           allowNull: false,
           defaultValue: DataTypes.NOW,
@@ -120,7 +120,7 @@ class Event extends Model<
         sequelize,
         tableName: 'Events',
         timestamps: true,
-        createdAt: 'created_at',
+        createdAt: 'createdAt',
         updatedAt: false,
         indexes: [
           { fields: ['date'] },

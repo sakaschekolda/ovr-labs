@@ -1,61 +1,111 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { api } from '../../api/axios';
-import { setAuth, clearAuth } from './authSlice';
+import { AxiosError } from 'axios';
+import { User } from '../../types';
 
-function mapErrorToRussian(message: string) {
-  if (!message) return 'Произошла ошибка';
-  if (message.includes('Invalid credentials')) return 'Неверный email или пароль';
-  if (message.includes('User already exists')) return 'Пользователь с таким email уже существует';
-  if (message.includes('Validation failed')) return 'Ошибка валидации данных';
-  if (message.includes('Password must be at least')) return 'Пароль должен быть не менее 8 символов';
-  if (message.includes('Passwords do not match')) return 'Пароли не совпадают';
-  if (message.includes('Email is required')) return 'Введите email';
-  return message;
+// Configure axios
+api.defaults.baseURL = 'http://localhost:5000';
+
+interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+interface RegisterData {
+  firstName: string;
+  lastName: string;
+  middleName: string;
+  email: string;
+  password: string;
+  gender: 'male' | 'female' | 'other';
+  birthDate: string;
+}
+
+interface LoginResponse {
+  token: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    middleName: string;
+    email: string;
+    role: string;
+    gender: 'male' | 'female' | 'other';
+    birthDate: string;
+  };
+}
+
+interface UpdateProfileData {
+  firstName: string;
+  lastName: string;
+  middleName: string;
+  gender: 'male' | 'female' | 'other';
+  birthDate: string;
 }
 
 export const loginUser = createAsyncThunk(
   'auth/login',
-  async (credentials: { email: string; password: string }, { dispatch, rejectWithValue }) => {
+  async (credentials: LoginCredentials) => {
     try {
-      const response = await api.post('/api/auth/login', credentials);
-      dispatch(setAuth(response.data));
+      const response = await api.post<LoginResponse>('/api/auth/login', credentials);
+      console.log('Login response:', response.data);
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
       return response.data;
-    } catch (error: any) {
-      // Логируем ошибку для отладки
-      console.error('Login error:', error.response?.data);
-      const data = error.response?.data;
-      let message = 'Ошибка входа';
-      if (data?.errors && typeof data.errors === 'object') {
-        message = Object.values(data.errors).join(', ');
-      } else if (data?.message) {
-        message = data.message;
-      } else if (error.response?.status === 401) {
-        message = 'Неверный email или пароль';
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        throw new Error(error.response?.data?.message || 'Failed to login');
       }
-      return rejectWithValue(mapErrorToRussian(message));
+      throw error;
     }
   }
 );
 
 export const registerUser = createAsyncThunk(
   'auth/register',
-  async (userData: { name: string; email: string; password: string }, { rejectWithValue }) => {
+  async (data: RegisterData) => {
     try {
-      const response = await api.post('/api/auth/register', userData);
+      console.log('Sending registration data:', data);
+      const response = await api.post<LoginResponse>('/api/auth/register', data);
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
       return response.data;
-    } catch (error: any) {
-      let message = error.response?.data?.message || 'Ошибка регистрации';
-      if (error.response?.data?.errors && typeof error.response.data.errors === 'object') {
-        message = Object.values(error.response.data.errors).join(', ');
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        console.error('Registration error response:', error.response?.data);
+        if (error.response?.data?.errors) {
+          const errors = error.response.data.errors;
+          if (errors.email) {
+            throw new Error(errors.email);
+          }
+          throw new Error(Object.values(errors)[0] as string);
+        }
+        throw new Error(error.response?.data?.message || 'Failed to register');
       }
-      return rejectWithValue(mapErrorToRussian(message));
+      throw error;
     }
   }
 );
 
 export const logoutUser = createAsyncThunk(
   'auth/logout',
-  async (_, { dispatch }) => {
-    dispatch(clearAuth());
+  async () => {
+    localStorage.removeItem('token');
+  }
+);
+
+export const updateProfile = createAsyncThunk(
+  'auth/updateProfile',
+  async (data: UpdateProfileData) => {
+    try {
+      const response = await api.put<{ data: User }>('/api/profile', data);
+      localStorage.setItem('user', JSON.stringify(response.data.data));
+      return response.data.data;
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        throw new Error(error.response?.data?.message || 'Failed to update profile');
+      }
+      throw error;
+    }
   }
 ); 

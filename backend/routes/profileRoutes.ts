@@ -1,19 +1,16 @@
-import express from 'express';
-import { getProfile, getUserEvents } from '../controllers/profileController';
+import { Router } from 'express';
+import { getProfile, updateProfile, getUserEvents } from '../controllers/profileController';
 import { authenticateJWT } from '../middleware/auth';
 
-const router = express.Router();
+const router = Router();
 
-// Все роуты профиля требуют аутентификации
-router.use(authenticateJWT);
+// Получение профиля
+router.get('/', authenticateJWT, getProfile);
 
-// Получить профиль пользователя
-router.get('/', getProfile);
+// Обновление профиля
+router.put('/', authenticateJWT, updateProfile);
 
-// Получить мероприятия пользователя
-router.get('/events', getUserEvents);
-
-// Get user events
-router.get('/events', getUserEvents);
+// Получение событий пользователя
+router.get('/events', authenticateJWT, getUserEvents);
 
 export default router; 

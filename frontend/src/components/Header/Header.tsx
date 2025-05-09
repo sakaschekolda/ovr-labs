@@ -25,7 +25,10 @@ const Header: React.FC = () => {
           {isAuthenticated ? (
             <>
               <div className="user-info">
-                <span className="user-name">{user?.name}</span>
+                <div className="user-welcome">
+                  <span className="user-name">Добро пожаловать, {user?.firstName}</span>
+                  <span className="user-role">{user?.role === 'admin' ? 'Администратор' : 'Пользователь'}</span>
+                </div>
                 <Button variant="secondary" onClick={() => navigate('/profile')}>
                   Профиль
                 </Button>

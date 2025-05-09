@@ -9,5 +9,14 @@ export default defineConfig({
       localsConvention: 'camelCase',
       generateScopedName: '[name]__[local]___[hash:base64:5]'
     }
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   }
 })

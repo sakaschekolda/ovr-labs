@@ -14,19 +14,24 @@ import sequelizeConnection from '@config/db';
 const SALT_ROUNDS = 10;
 
 export type UserRole = 'user' | 'admin';
+export type UserGender = 'male' | 'female' | 'other';
 
 export type UserCreationAttributes = Optional<
   InferAttributes<User>,
-  'id' | 'created_at' | 'role' | 'password'
+  'id' | 'createdAt' | 'role' | 'password'
 >;
 
 class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
   declare id: CreationOptional<number>;
-  declare name: string;
+  declare firstName: string;
+  declare lastName: string;
+  declare middleName: string;
   declare email: string;
   declare password: CreationOptional<string | null>;
   declare role: UserRole;
-  declare created_at: CreationOptional<Date>;
+  declare gender: UserGender;
+  declare birthDate: string;
+  declare createdAt: CreationOptional<Date>;
 
   public static initializeModel(sequelize: Sequelize): void {
     User.init(
@@ -36,14 +41,36 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
           primaryKey: true,
           autoIncrement: true,
         },
-        name: {
-          type: DataTypes.STRING(100),
+        firstName: {
+          type: DataTypes.STRING(50),
           allowNull: false,
           validate: {
-            notEmpty: { msg: 'Name cannot be empty' },
+            notEmpty: { msg: 'First name cannot be empty' },
             len: {
-              args: [2, 100],
-              msg: 'Name must be between 2 and 100 characters',
+              args: [2, 50],
+              msg: 'First name must be between 2 and 50 characters',
+            },
+          },
+        },
+        lastName: {
+          type: DataTypes.STRING(50),
+          allowNull: false,
+          validate: {
+            notEmpty: { msg: 'Last name cannot be empty' },
+            len: {
+              args: [2, 50],
+              msg: 'Last name must be between 2 and 50 characters',
+            },
+          },
+        },
+        middleName: {
+          type: DataTypes.STRING(50),
+          allowNull: false,
+          validate: {
+            notEmpty: { msg: 'Middle name cannot be empty' },
+            len: {
+              args: [2, 50],
+              msg: 'Middle name must be between 2 and 50 characters',
             },
           },
         },
@@ -71,7 +98,25 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
           allowNull: false,
           defaultValue: 'user',
         },
-        created_at: {
+        gender: {
+          type: DataTypes.ENUM('male', 'female', 'other'),
+          allowNull: false,
+          validate: {
+            isIn: {
+              args: [['male', 'female', 'other']],
+              msg: 'Invalid gender value'
+            }
+          }
+        },
+        birthDate: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          validate: {
+            isDate: { msg: 'Invalid birth date format', args: true },
+            notEmpty: { msg: 'Birth date cannot be empty' }
+          }
+        },
+        createdAt: {
           type: DataTypes.DATE,
           allowNull: false,
           defaultValue: DataTypes.NOW,
@@ -81,7 +126,7 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
         sequelize,
         tableName: 'Users',
         timestamps: true,
-        createdAt: 'created_at',
+        createdAt: 'createdAt',
         updatedAt: false,
         defaultScope: {
           attributes: { exclude: ['password'] },

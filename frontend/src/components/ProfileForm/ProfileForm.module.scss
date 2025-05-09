@@ -24,7 +24,7 @@ label {
   color: #333;
 }
 
-input, textarea, select {
+input, select {
   padding: 8px 10px;
   border: 1.5px solid #b71c1c;
   border-radius: 6px;
@@ -33,45 +33,17 @@ input, textarea, select {
   color: #333;
   transition: border 0.2s;
   font-family: inherit;
-}
 
-input:focus, textarea:focus, select:focus {
-  border: 2px solid #a31515;
-  outline: none;
-}
-
-textarea {
-  min-height: 80px;
-  resize: vertical;
+  &:focus {
+    border: 2px solid #a31515;
+    outline: none;
+  }
 }
 
 .error {
   color: #b71c1c;
   font-size: 0.95em;
   margin-top: 2px;
-}
-
-.buttonGroup {
-  display: flex;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.backButton {
-  background: #fff;
-  color: #b71c1c;
-  border: 1.5px solid #b71c1c;
-  border-radius: 6px;
-  padding: 10px 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  flex: 1;
-
-  &:hover {
-    background: #fff5f5;
-  }
 }
 
 .submitButton {
@@ -84,7 +56,6 @@ textarea {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
-  flex: 1;
 
   &:hover:not(:disabled) {
     background: #a31515;
