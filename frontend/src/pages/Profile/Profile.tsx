@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { RootState } from '../../app/store';
 import { fetchUserEvents, deleteEventThunk } from '../../features/events/eventsThunks';
@@ -8,6 +8,7 @@ import ErrorNotification from '../../components/ErrorNotification';
 import EventCard from '../../components/EventCard/EventCard';
 import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
 import ProfileForm from '../../components/ProfileForm/ProfileForm';
+import Button from '../../components/Button';
 import styles from './Profile.module.scss';
 
 const Spinner = () => (
@@ -27,10 +28,16 @@ const Spinner = () => (
 const Profile = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated, isLoading: isAuthLoading, errorMessage: authError } = useAppSelector((state: RootState) => state.auth);
   const { userEvents, isLoading: isEventsLoading, isError: isEventsError, errorMessage: eventsError } = useAppSelector((state: RootState) => state.events);
   const [eventToDelete, setEventToDelete] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  const handleLogoClick = () => {
+    const from = location.state?.from || '/';
+    navigate(from);
+  };
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -88,7 +95,65 @@ const Profile = () => {
   if (isEventsError) {
     return (
       <div className={styles.profileContainer}>
-        <ErrorNotification message={eventsError || 'Произошла ошибка при загрузке данных'} />
+        <ErrorNotification
+          message={eventsError || 'Произошла ошибка при загрузке данных'}
+          onClose={() => {}}
+          duration={5000}
+        />
+        <div className={styles.profileContent}>
+          <div className={styles.profileHeader}>
+            <div className={styles.headerContent}>
+              <div className={styles.logo} onClick={handleLogoClick}>
+                <h1>EventHub</h1>
+              </div>
+              <h2>Профиль</h2>
+            </div>
+            {isEditing ? (
+              <ProfileForm
+                user={user!}
+                onSubmit={handleUpdateProfile}
+                isLoading={isAuthLoading}
+                error={authError}
+              />
+            ) : (
+              <>
+                <div className={styles.userInfo}>
+                  <div className={styles.infoItem}>
+                    <span className={styles.label}>Имя:</span>
+                    <span className={styles.value}>{user?.firstName || 'Не указано'}</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                    <span className={styles.label}>Фамилия:</span>
+                    <span className={styles.value}>{user?.lastName || 'Не указано'}</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                    <span className={styles.label}>Отчество:</span>
+                    <span className={styles.value}>{user?.middleName || 'Не указано'}</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                    <span className={styles.label}>Email:</span>
+                    <span className={styles.value}>{user?.email}</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                    <span className={styles.label}>Пол:</span>
+                    <span className={styles.value}>
+                      {user?.gender === 'male' ? 'Мужской' :
+                       user?.gender === 'female' ? 'Женский' :
+                       'Другой'}
+                    </span>
+                  </div>
+                  <div className={styles.infoItem}>
+                    <span className={styles.label}>Дата рождения:</span>
+                    <span className={styles.value}>{user?.birthDate ? formatDate(user.birthDate) : 'Не указано'}</span>
+                  </div>
+                </div>
+                <Button onClick={() => setIsEditing(true)} variant="secondary">
+                  Редактировать профиль
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
@@ -96,7 +161,12 @@ const Profile = () => {
   return (
     <div className={styles.profileContainer}>
       <div className={styles.profileHeader}>
-        <h1>Профиль</h1>
+        <div className={styles.headerContent}>
+          <div className={styles.logo} onClick={handleLogoClick}>
+            <h1>EventHub</h1>
+          </div>
+          <h2>Профиль</h2>
+        </div>
         {isEditing ? (
           <ProfileForm
             user={user!}

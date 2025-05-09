@@ -217,21 +217,21 @@ router.post(
         } else if (error instanceof Error) {
           if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
             const sequelizeError = error as SequelizeError;
-            const errors: Record<string, string> = {};
-            if (sequelizeError.errors && Array.isArray(sequelizeError.errors)) {
-              sequelizeError.errors.forEach((err) => {
-                if (err.path) {
-                  errors[err.path] = err.message;
-                }
-              });
-            }
+          const errors: Record<string, string> = {};
+          if (sequelizeError.errors && Array.isArray(sequelizeError.errors)) {
+            sequelizeError.errors.forEach((err) => {
+              if (err.path) {
+                errors[err.path] = err.message;
+              }
+            });
+          }
             next(new ValidationError(errors));
           } else {
             next(new Error(`Registration failed: ${error.message}`));
           }
         } else {
           next(new Error('An unexpected error occurred during registration'));
-        }
+      }
       }
     }
   )

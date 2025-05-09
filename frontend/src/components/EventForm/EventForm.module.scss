@@ -7,9 +7,11 @@
   background: #fff;
   padding: 32px 24px;
   border-radius: 12px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
-  color: #333;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.1);
+  color: #424242;
   font-family: inherit;
+  border: 1px solid #e3f2fd;
+  width: 100%;
 }
 
 .formGroup {
@@ -21,77 +23,118 @@
 label {
   font-weight: 600;
   margin-bottom: 2px;
-  color: #333;
+  color: #1976d2;
+  font-size: 0.9rem;
 }
 
 input, textarea, select {
-  padding: 8px 10px;
-  border: 1.5px solid #b71c1c;
+  padding: 10px 12px;
+  border: 1.5px solid #e3f2fd;
   border-radius: 6px;
   font-size: 1rem;
   background: #fff;
-  color: #333;
-  transition: border 0.2s;
+  color: #424242;
+  transition: all 0.2s ease;
   font-family: inherit;
-}
+  width: 100%;
 
-input:focus, textarea:focus, select:focus {
-  border: 2px solid #a31515;
-  outline: none;
+  &:focus {
+    border-color: #1976d2;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+  }
+
+  &:hover {
+    border-color: #90caf9;
+  }
 }
 
 textarea {
-  min-height: 80px;
+  min-height: 100px;
   resize: vertical;
 }
 
 .error {
-  color: #b71c1c;
-  font-size: 0.95em;
-  margin-top: 2px;
+  color: #d32f2f;
+  font-size: 0.9rem;
+  margin-top: 4px;
 }
 
 .buttonGroup {
   display: flex;
   gap: 12px;
   margin-top: 8px;
+  flex-wrap: wrap;
 }
 
 .backButton {
   background: #fff;
-  color: #b71c1c;
-  border: 1.5px solid #b71c1c;
+  color: #1976d2;
+  border: 1.5px solid #1976d2;
   border-radius: 6px;
-  padding: 10px 0;
-  font-size: 1.1rem;
+  padding: 12px 0;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   flex: 1;
+  min-width: 120px;
 
   &:hover {
-    background: #fff5f5;
+    background: #e3f2fd;
   }
 }
 
 .submitButton {
-  background: #b71c1c;
+  background: #1976d2;
   color: #fff;
   border: none;
   border-radius: 6px;
-  padding: 10px 0;
-  font-size: 1.1rem;
+  padding: 12px 0;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
   flex: 1;
+  min-width: 120px;
 
   &:hover:not(:disabled) {
-    background: #a31515;
+    background: #1565c0;
   }
 
   &:disabled {
-    background: #e57373;
+    background: #90caf9;
     cursor: not-allowed;
+  }
+}
+
+@media (max-width: 320px) {
+  .form {
+    padding: 20px 16px;
+    gap: 16px;
+  }
+
+  .formGroup {
+    gap: 4px;
+  }
+
+  label {
+    font-size: 0.85rem;
+  }
+
+  input, textarea, select {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  .buttonGroup {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .backButton, .submitButton {
+    width: 100%;
+    padding: 10px 0;
+    font-size: 0.9rem;
   }
 } 
