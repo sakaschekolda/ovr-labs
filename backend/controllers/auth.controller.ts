@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt, { SignOptions } from 'jsonwebtoken';
-import User from '@models/User';
+import User, { UserGender } from '@models/User';
 import { ValidationError, UnauthorizedError } from '@utils/errors';
 import 'dotenv/config';
 
@@ -14,9 +14,13 @@ interface LoginResponseBody {
   token: string;
   user: {
     id: number;
-    name: string;
+    firstName: string;
+    lastName: string;
+    middleName: string;
     email: string;
     role?: 'user' | 'admin';
+    gender: UserGender;
+    birthDate: string;
   };
 }
 
@@ -45,6 +49,11 @@ if (!jwtSecret) {
   console.error('❌ JWT_SECRET environment variable is not defined!');
   process.exit(1);
 }
+
+const formatBirthDate = (date: string | Date): string => {
+  if (typeof date === 'string') return date;
+  return date.toISOString().split('T')[0];
+};
 
 export const login = async (
   req: Request<object, LoginResponseBody, LoginRequestBody>,
@@ -100,9 +109,13 @@ export const login = async (
       token: token,
       user: {
         id: user.id,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        middleName: user.middleName,
         email: user.email,
         role: userRole,
+        gender: user.gender,
+        birthDate: formatBirthDate(user.birthDate)
       },
     };
 
@@ -172,7 +185,7 @@ export const getCurrentUser = async (
     }
 
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'name', 'email', 'role']
+      attributes: ['id', 'firstName', 'lastName', 'middleName', 'email', 'role', 'gender', 'birthDate']
     });
 
     if (!user) {
@@ -182,9 +195,13 @@ export const getCurrentUser = async (
     res.status(200).json({
       user: {
         id: user.id,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        middleName: user.middleName,
         email: user.email,
-        role: user.role
+        role: user.role,
+        gender: user.gender,
+        birthDate: formatBirthDate(user.birthDate)
       }
     });
   } catch (err) {

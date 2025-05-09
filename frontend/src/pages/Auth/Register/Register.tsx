@@ -21,16 +21,16 @@ const Spinner = () => (
   }} />
 );
 
-function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
 export const Register: React.FC = () => {
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
+    middleName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    gender: 'other' as 'male' | 'female' | 'other',
+    birthDate: ''
   });
   const [showError, setShowError] = useState(false);
   const [customError, setCustomError] = useState('');
@@ -71,6 +71,16 @@ export const Register: React.FC = () => {
       setCustomError('Пароль должен быть не менее 8 символов');
       return;
     }
+    if (!formData.firstName || !formData.lastName || !formData.middleName) {
+      setShowError(true);
+      setCustomError('Все поля имени обязательны для заполнения');
+      return;
+    }
+    if (!formData.birthDate) {
+      setShowError(true);
+      setCustomError('Дата рождения обязательна для заполнения');
+      return;
+    }
     setCustomError('');
     try {
       await dispatch(registerUser(formData)).unwrap();
@@ -84,7 +94,7 @@ export const Register: React.FC = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -107,22 +117,75 @@ export const Register: React.FC = () => {
           <h1 className={styles.title}>Create Account</h1>
           <form onSubmit={handleSubmit} noValidate>
             <div className={styles.formGroup}>
-              <label htmlFor="name" className={styles.label}>Name</label>
+              <label htmlFor="firstName" className={styles.label}>First Name</label>
               <input
                 type="text"
-                id="name"
-                name="name"
-                value={formData.name}
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
                 onChange={handleChange}
                 required
-                minLength={3}
+                minLength={2}
+                className={styles.input}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="lastName" className={styles.label}>Last Name</label>
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+                minLength={2}
+                className={styles.input}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="middleName" className={styles.label}>Middle Name</label>
+              <input
+                type="text"
+                id="middleName"
+                name="middleName"
+                value={formData.middleName}
+                onChange={handleChange}
+                required
+                minLength={2}
+                className={styles.input}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="gender" className={styles.label}>Gender</label>
+              <select
+                id="gender"
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+                required
+                className={styles.input}
+              >
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="birthDate" className={styles.label}>Birth Date</label>
+              <input
+                type="date"
+                id="birthDate"
+                name="birthDate"
+                value={formData.birthDate}
+                onChange={handleChange}
+                required
                 className={styles.input}
               />
             </div>
             <div className={styles.formGroup}>
               <label htmlFor="email" className={styles.label}>Email</label>
               <input
-                type="text"
+                type="email"
                 id="email"
                 name="email"
                 value={formData.email}
@@ -173,4 +236,9 @@ export const Register: React.FC = () => {
       `}</style>
     </>
   );
+};
+
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 }; 

@@ -3,6 +3,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import styles from './EventForm.module.scss';
 import { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export interface EventFormValues {
   title: string;
@@ -41,6 +42,8 @@ interface Props {
 }
 
 const EventForm: React.FC<Props> = ({ event, onSubmit, isLoading, error }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { register, handleSubmit, formState: { errors }, reset } = useForm<EventFormValues>({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -60,6 +63,11 @@ const EventForm: React.FC<Props> = ({ event, onSubmit, isLoading, error }) => {
       });
     }
   }, [event, reset]);
+
+  const handleBack = () => {
+    const from = location.state?.from || '/events';
+    navigate(from);
+  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
@@ -107,7 +115,14 @@ const EventForm: React.FC<Props> = ({ event, onSubmit, isLoading, error }) => {
       </div>
 
       {error && <div className={styles.error}>{error}</div>}
-      <button type="submit" disabled={isLoading}>{isLoading ? 'Сохранение...' : 'Сохранить'}</button>
+      <div className={styles.buttonGroup}>
+        <button type="button" onClick={handleBack} className={styles.backButton}>
+          Назад
+        </button>
+        <button type="submit" disabled={isLoading} className={styles.submitButton}>
+          {isLoading ? 'Сохранение...' : 'Сохранить'}
+        </button>
+      </div>
     </form>
   );
 };

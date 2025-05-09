@@ -1,7 +1,12 @@
 export interface User {
   id: string;
-  username: string;
+  firstName: string;
+  lastName: string;
+  middleName: string;
   email: string;
+  role: string;
+  gender: 'male' | 'female' | 'other';
+  birthDate: string;
 }
 
 export interface ApiResponse<T> {

@@ -8,19 +8,27 @@ import { authenticateToken } from '../middleware/auth.middleware';
 const router: Router = express.Router();
 
 interface RegisterRequestBody {
-  name?: string;
-  email?: string;
-  password?: string;
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  middleName: string;
+  gender: 'male' | 'female' | 'other';
+  birthDate: string;
 }
 
 interface RegisterResponseBody {
+  success: boolean;
   message: string;
-  user: {
+  user?: {
     id: number;
-    name: string;
+    firstName: string;
+    lastName: string;
+    middleName: string;
     email: string;
-    role: UserRole;
-    created_at: Date;
+    role: 'user' | 'admin';
+    gender: 'male' | 'female' | 'other';
+    birthDate: string;
   };
 }
 
@@ -107,88 +115,126 @@ router.post(
       next: NextFunction,
     ): Promise<void> => {
       try {
-        const { name, email, password } = req.body;
-        console.log('Received registration request:', { name, email, password });
-        console.log('Full request body:', req.body);
+        const {
+          email,
+          password,
+          firstName,
+          lastName,
+          middleName,
+          gender,
+          birthDate
+        } = req.body;
 
+        // Валидация обязательных полей
         const validationErrors: Record<string, string> = {};
-        if (!name) validationErrors.name = 'Name is required';
-        if (!email) {
-          validationErrors.email = 'Email is required';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          validationErrors.email = 'Invalid email format';
-        }
+        if (!email) validationErrors.email = 'Email is required';
         if (!password) validationErrors.password = 'Password is required';
+        if (!firstName) validationErrors.firstName = 'First name is required';
+        if (!lastName) validationErrors.lastName = 'Last name is required';
+        if (!middleName) validationErrors.middleName = 'Middle name is required';
+        if (!gender) validationErrors.gender = 'Gender is required';
+        if (!birthDate) validationErrors.birthDate = 'Birth date is required';
 
         if (Object.keys(validationErrors).length > 0) {
-          throw new ValidationError(
-            validationErrors,
-            'User registration failed validation.',
-          );
+          throw new ValidationError(validationErrors);
         }
 
-        const existingUser: User | null = await User.findOne({
-          where: { email },
-        });
+        // Валидация пароля
+        if (password.length < 8) {
+          throw new ValidationError({
+            password: 'Password must be at least 8 characters long'
+          });
+        }
+
+        // Валидация email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          throw new ValidationError({
+            email: 'Invalid email format'
+          });
+        }
+
+        // Валидация пола
+        if (!['male', 'female', 'other'].includes(gender)) {
+          throw new ValidationError({
+            gender: 'Invalid gender value'
+          });
+        }
+
+        // Валидация даты рождения
+        const birthDateObj = new Date(birthDate);
+        if (isNaN(birthDateObj.getTime())) {
+          throw new ValidationError({
+            birthDate: 'Invalid birth date format'
+          });
+        }
+
+        // Проверка существования пользователя
+        const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
-          throw new ValidationError(
-            { email: 'Email address is already in use.' },
-            'User registration failed.',
-          );
+          throw new ValidationError({
+            email: 'Email is already registered'
+          });
         }
 
-        const user: User = await User.create({
-          name: name!,
-          email: email!,
-          password: password!,
-          role: 'user',
+        // Создание пользователя
+        const user = await User.create({
+          email,
+          password,
+          firstName,
+          lastName,
+          middleName,
+          gender,
+          birthDate: birthDateObj.toISOString().split('T')[0],
+          role: 'user'
         });
-
-        const userRole: UserRole = user.getDataValue('role');
-        const createdAt: Date = user.getDataValue('created_at');
-
-        const createdUserData = {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: userRole,
-          created_at: createdAt,
-        };
 
         res.status(201).json({
+          success: true,
           message: 'User registered successfully.',
-          user: createdUserData,
+          user: {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            middleName: user.middleName,
+            email: user.email,
+            role: user.role,
+            gender: user.gender,
+            birthDate: user.birthDate
+          }
         });
-      } catch (error: unknown) {
+      } catch (error) {
+        console.error('Registration error details:', {
+          error,
+          errorName: error instanceof Error ? error.name : 'Unknown',
+          errorMessage: error instanceof Error ? error.message : 'Unknown',
+          errorStack: error instanceof Error ? error.stack : 'No stack trace',
+          requestBody: req.body
+        });
+
         if (error instanceof ValidationError) {
           next(error);
-          return;
-        }
-        if (
-          error instanceof Error &&
-          (error.name === 'SequelizeValidationError' ||
-            error.name === 'SequelizeUniqueConstraintError')
-        ) {
-          const errors: Record<string, string> = {};
-          const sequelizeError = error as SequelizeError;
-          if (sequelizeError.errors && Array.isArray(sequelizeError.errors)) {
-            sequelizeError.errors.forEach((err) => {
-              if (err.path) {
-                errors[err.path] = err.message;
-              }
-            });
+        } else if (error instanceof Error) {
+          if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+            const sequelizeError = error as SequelizeError;
+            const errors: Record<string, string> = {};
+            if (sequelizeError.errors && Array.isArray(sequelizeError.errors)) {
+              sequelizeError.errors.forEach((err) => {
+                if (err.path) {
+                  errors[err.path] = err.message;
+                }
+              });
+            }
+            next(new ValidationError(errors));
+          } else {
+            next(new Error(`Registration failed: ${error.message}`));
           }
-          const message =
-            error.name === 'SequelizeUniqueConstraintError'
-              ? 'Database constraint violation.'
-              : 'User registration failed database validation.';
-          next(new ValidationError(errors, message));
-          return;
+        } else {
+          next(new Error('An unexpected error occurred during registration'));
         }
-        next(error);
       }
-    },
-  ),
+    }
+  )
 );
 
 /**

@@ -11,7 +11,8 @@ export interface Event {
   created_at: string;
   creator?: {
     id: number;
-    name: string;
+    firstName: string;
+    lastName: string;
     role: string;
   };
 }

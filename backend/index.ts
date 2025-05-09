@@ -126,7 +126,7 @@ app.use(
     apiSpec: swaggerSpec as unknown as Record<string, unknown>,
     validateRequests: true,
     validateResponses: false,
-    ignorePaths: /\/api-docs|\/auth\/login|\/auth\/register|\/auth\/me/,
+    ignorePaths: /\/api-docs|\/auth\/login|\/auth\/register|\/auth\/me|\/profile/,
   }),
 );
 
@@ -214,9 +214,6 @@ const startServer = async (): Promise<void> => {
   try {
     await sequelizeConnection.authenticate();
     console.log('✅ Database connection established');
-
-    await sequelizeConnection.sync({ alter: true });
-    console.log('✅ Database synchronized');
 
     app.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);

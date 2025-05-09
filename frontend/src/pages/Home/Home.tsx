@@ -32,7 +32,7 @@ export const Home = () => {
         <nav className={styles.authNav}>
           {isAuthenticated ? (
             <div className={styles.userInfo}>
-              <span>Добро пожаловать, {user?.name}</span>
+              <span>Добро пожаловать, {user?.firstName} {user?.lastName}</span>
               <Button variant="secondary" onClick={() => navigate('/profile')}>
                 Профиль
               </Button>
