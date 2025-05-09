@@ -32,8 +32,15 @@ export const Home = () => {
         <nav className={styles.authNav}>
           {isAuthenticated ? (
             <div className={styles.userInfo}>
-              <span>Добро пожаловать, {user?.firstName} {user?.lastName}</span>
-              <Button variant="secondary" onClick={() => navigate('/profile')}>
+              <div className={styles.userWelcome}>
+                <span className={styles.userName}>
+                  Добро пожаловать, {user?.firstName} {user?.lastName}
+                </span>
+                <span className={styles.userRole}>
+                  {user?.role === 'admin' ? 'Администратор' : 'Пользователь'}
+                </span>
+              </div>
+              <Button variant="secondary" onClick={() => navigate('/profile', { state: { from: '/' } })}>
                 Профиль
               </Button>
               <Button variant="secondary" onClick={handleLogout}>
@@ -43,10 +50,10 @@ export const Home = () => {
           ) : (
             <div className={styles.authButtons}>
               <Link to="/auth/login">
-                <Button>Login</Button>
+                <Button>Войти</Button>
               </Link>
               <Link to="/auth/register">
-                <Button>Register</Button>
+                <Button>Регистрация</Button>
               </Link>
             </div>
           )}

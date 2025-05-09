@@ -6,19 +6,25 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  background-color: #f5f9ff;
+  width: 100%;
 }
 
 .title {
   text-align: center;
   color: #1976d2;
   margin-bottom: 30px;
+  font-size: 2rem;
+  font-weight: 600;
 }
 
 .form {
   background-color: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 32px 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.1);
+  border: 1px solid #e3f2fd;
+  width: 100%;
 }
 
 .formGroup {
@@ -28,31 +34,134 @@
 .label {
   display: block;
   margin-bottom: 8px;
-  color: #333;
-  font-weight: 500;
+  color: #1976d2;
+  font-weight: 600;
+  font-size: 0.9rem;
 }
 
 .input {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
-  transition: border-color 0.3s ease;
+  padding: 10px 12px;
+  border: 1.5px solid #e3f2fd;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  color: #424242;
+  background: #fff;
 
   &:focus {
-    outline: none;
     border-color: #1976d2;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+  }
+
+  &:hover {
+    border-color: #90caf9;
   }
 }
 
 .submitButton {
   width: 100%;
   margin-top: 10px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: #1565c0;
+  }
+
+  &:disabled {
+    background: #90caf9;
+    cursor: not-allowed;
+  }
 }
 
 .registerLink {
   text-align: center;
   margin-top: 20px;
-  color: #666;
+  color: #757575;
+  font-size: 0.9rem;
+
+  a {
+    color: #1976d2;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.error {
+  color: #d32f2f;
+  font-size: 0.9rem;
+  margin-top: 4px;
+  text-align: center;
+}
+
+.loading {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #1976d2;
+  margin-top: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+@media (max-width: 320px) {
+  .authContainer {
+    padding: 20px 16px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+  }
+
+  .form {
+    padding: 24px 16px;
+  }
+
+  .formGroup {
+    margin-bottom: 16px;
+  }
+
+  .label {
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+  }
+
+  .input {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  .submitButton {
+    padding: 10px 0;
+    font-size: 0.9rem;
+  }
+
+  .registerLink {
+    margin-top: 16px;
+    font-size: 0.85rem;
+  }
+
+  .error {
+    font-size: 0.85rem;
+  }
+
+  .loading {
+    font-size: 1rem;
+    margin-top: 1.5rem;
+  }
 } 

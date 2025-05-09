@@ -1,41 +1,56 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { RootState } from '../../app/store';
 import { fetchEvents, deleteEventThunk } from '../../features/events/eventsThunks';
-import styles from './Events.module.scss';
-import ErrorNotification from '../../components/ErrorNotification';
-import { useNavigate } from 'react-router-dom';
+import { logoutUser } from '../../features/auth/authThunks';
 import EventCard from '../../components/EventCard/EventCard';
 import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
+import Button from '../../components/Button';
+import styles from './Events.module.scss';
+import ErrorNotification from '../../components/ErrorNotification';
+
+const eventCategories = [
+  { value: 'concert', label: 'Концерт' },
+  { value: 'lecture', label: 'Лекция' },
+  { value: 'exhibition', label: 'Выставка' },
+  { value: 'master class', label: 'Мастер-класс' },
+  { value: 'sport', label: 'Спорт' },
+];
 
 const Events: React.FC = () => {
   const dispatch = useAppDispatch();
-  const user = useAppSelector((state: RootState) => state.auth.user);
-  const events = useAppSelector((state: RootState) => state.events.events) || [];
-  const isLoading = useAppSelector((state: RootState) => state.events.isLoading);
+  const navigate = useNavigate();
+  const { events, isLoading } = useAppSelector((state: RootState) => state.events);
+  const { user, isAuthenticated } = useAppSelector((state: RootState) => state.auth);
+  const [eventToDelete, setEventToDelete] = useState<number | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const isError = useAppSelector((state: RootState) => state.events.isError);
   const errorMessage = useAppSelector((state: RootState) => state.events.errorMessage);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const navigate = useNavigate();
-  const [eventToDelete, setEventToDelete] = useState<number | null>(null);
 
-  const categories = ['all', 'concert', 'lecture', 'exhibition', 'master class', 'sport'];
-
-  React.useEffect(() => {
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/auth/login');
+      return;
+    }
     dispatch(fetchEvents());
-  }, [dispatch]);
+  }, [dispatch, isAuthenticated, navigate]);
 
-  const filteredEvents = React.useMemo(() => {
-    if (!Array.isArray(events)) return [];
-    if (selectedCategory === 'all') return events;
-    return events.filter(event => event.category === selectedCategory);
-  }, [selectedCategory, events]);
+  const handleLogout = () => {
+    dispatch(logoutUser());
+    navigate('/');
+  };
+
+  const handleEditEvent = (id: number) => {
+    navigate(`/events/${id}/edit`);
+  };
 
   const handleDeleteEvent = async () => {
     if (eventToDelete) {
       try {
         await dispatch(deleteEventThunk(String(eventToDelete))).unwrap();
         setEventToDelete(null);
+        dispatch(fetchEvents());
       } catch (error) {
         console.error('Ошибка при удалении:', error);
       }
@@ -46,44 +61,96 @@ const Events: React.FC = () => {
     setSelectedCategory(e.target.value);
   };
 
+  const categories = ['all', ...eventCategories.map(c => c.value)];
   const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case 'concert':
-        return 'Концерт';
-      case 'lecture':
-        return 'Лекция';
-      case 'exhibition':
-        return 'Выставка';
-      case 'master class':
-        return 'Мастер-класс';
-      case 'sport':
-        return 'Спорт';
-      default:
-        return category;
-    }
+    if (category === 'all') return 'Все категории';
+    const found = eventCategories.find(c => c.value === category);
+    return found ? found.label : category;
   };
 
-  const handleEditEvent = (eventId: number) => {
-    console.log('Editing event:', eventId);
-    navigate(`/events/${eventId}/edit`, { state: { from: '/events' } });
-  };
+  const filteredEvents = selectedCategory === 'all'
+    ? events
+    : events.filter(event => event.category === selectedCategory);
 
   if (isLoading) return <div className={styles.loading}>Загрузка...</div>;
-  if (isError) return <ErrorNotification message={errorMessage || 'Неизвестная ошибка'} />;
+  if (isError) {
+    return (
+      <>
+        <ErrorNotification
+          message={errorMessage || 'Неизвестная ошибка'}
+          onClose={() => {}}
+          duration={5000}
+        />
+        <div className={styles.eventsContainer}>
+          <h1>Мероприятия</h1>
+          <div className={styles.categoryFilter}>
+            <select value={selectedCategory} onChange={handleCategoryChange}>
+              {categories.map(category => (
+                <option key={category} value={category}>
+                  {getCategoryLabel(category)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className={styles.eventsList}>
+            {filteredEvents.map(event => (
+              <EventCard
+                key={event.id}
+                {...event}
+                userId={user?.id ? Number(user.id) : undefined}
+                userRole={user?.role}
+                onEdit={handleEditEvent}
+                onDelete={(id: number) => setEventToDelete(id)}
+              />
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <div className={styles.eventsPage}>
+      {/* Header */}
+      <header className={styles.header}>
+        <div className={styles.headerContent}>
+          <div className={styles.logo} onClick={() => navigate('/')}>
+            <h1>EventHub</h1>
+          </div>
+          <nav className={styles.authNav}>
+            {isAuthenticated && user && (
+              <div className={styles.userInfo}>
+                <div className={styles.userWelcome}>
+                  <span className={styles.userName}>
+                    Добро пожаловать, {user.firstName} {user.lastName}
+                  </span>
+                  <span className={styles.userRole}>
+                    {user.role === 'admin' ? 'Администратор' : 'Пользователь'}
+                  </span>
+                </div>
+                <div className={styles.userActions}>
+                  <Button variant="secondary" onClick={() => navigate('/profile', { state: { from: '/events' } })}>
+                    Профиль
+                  </Button>
+                  <Button variant="secondary" onClick={handleLogout}>
+                    Выйти
+                  </Button>
+                </div>
+              </div>
+            )}
+          </nav>
+        </div>
+      </header>
+
       <div className={styles.eventsContent}>
         {user && (
           <div className={styles.createEventContainer}>
-            <button
-              className={styles.createButton}
-              onClick={() => navigate('/events/create')}
-            >
+            <Button onClick={() => navigate('/events/create')}>
               Создать мероприятие
-            </button>
+            </Button>
           </div>
         )}
+
         <div className={styles.filters}>
           <select
             value={selectedCategory}
@@ -92,7 +159,7 @@ const Events: React.FC = () => {
           >
             {categories.map(category => (
               <option key={category} value={category}>
-                {category === 'all' ? 'Все категории' : getCategoryLabel(category)}
+                {getCategoryLabel(category)}
               </option>
             ))}
           </select>

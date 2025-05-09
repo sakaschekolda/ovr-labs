@@ -1,14 +1,20 @@
 .eventCard {
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  border: 1.5px solid #e0e0e0;
+  border: 1.5px solid #e3f2fd;
   margin-bottom: 1rem;
   position: relative;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.1);
+    border-color: #90caf9;
+  }
 }
 
 .eventContent {
@@ -16,73 +22,75 @@
 }
 
 .eventCategory {
-  color: #b71c1c;
+  color: #1976d2;
   font-weight: 600;
   margin-bottom: 0.5rem;
 }
 
 .eventDate {
-  color: #333;
+  color: #424242;
   font-size: 1rem;
   margin-bottom: 0.5rem;
 }
 
 .eventLocation {
-  color: #333;
+  color: #424242;
   font-size: 1rem;
   margin-bottom: 0.5rem;
 }
 
 .eventParticipants {
-  color: #666;
+  color: #616161;
   font-size: 1rem;
   margin-bottom: 0.5rem;
 }
 
 .eventDescription {
-  color: #444;
+  color: #424242;
   margin-bottom: 0.5rem;
+  line-height: 1.5;
 }
 
 .eventCreator {
-  color: #888;
+  color: #757575;
   font-size: 0.95em;
 }
 
 .eventActions {
   display: flex;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.75rem;
   margin-top: 1rem;
-  flex-wrap: wrap;
-}
+  width: 100%;
 
-:global(.button) {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  font-size: 0.9rem;
-  min-width: 120px;
-  text-align: center;
+  :global(.button) {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    font-size: 0.9rem;
+    width: 100%;
+    text-align: center;
 
-  &.button-primary {
-    background-color: #b71c1c;
-    color: white;
+    &.button-primary {
+      background-color: #1976d2;
+      color: white;
 
-    &:hover {
-      background-color: #a31515;
+      &:hover {
+        background-color: #1565c0;
+      }
     }
-  }
 
-  &.button-secondary {
-    background-color: #f5f5f5;
-    color: #333;
-    border: 1px solid #ddd;
+    &.button-secondary {
+      background-color: #e3f2fd;
+      color: #1976d2;
+      border: 1px solid #90caf9;
 
-    &:hover {
-      background-color: #e0e0e0;
+      &:hover {
+        background-color: #bbdefb;
+      }
     }
   }
 } 

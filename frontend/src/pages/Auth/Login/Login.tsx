@@ -26,39 +26,56 @@ function isValidEmail(email: string) {
 }
 
 export const Login: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useAppDispatch();
+  const { isLoading, errorMessage, user } = useAppSelector((state: RootState) => state.auth);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showError, setShowError] = useState(false);
   const [customError, setCustomError] = useState('');
-  const dispatch = useAppDispatch();
-  const { isAuthenticated, isLoading, isError, errorMessage } = useAppSelector((state: RootState) => state.auth);
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const from = location.state?.from?.pathname === '/events' ? '/events' : '/';
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (user) {
+      const from = location.state?.from?.pathname || '/';
       navigate(from, { replace: true });
     }
-  }, [isAuthenticated, navigate, from]);
+  }, [user, navigate, location]);
 
   useEffect(() => {
-    if (isError && errorMessage) {
+    if (errorMessage) {
       setShowError(true);
-      setCustomError('');
     }
-  }, [isError, errorMessage]);
+  }, [errorMessage]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValidEmail(email)) {
+    setShowError(false);
+    setCustomError('');
+
+    if (!email || !password) {
+      setCustomError('Пожалуйста, заполните все поля');
       setShowError(true);
-      setCustomError('Введите корректный email');
       return;
     }
-    setCustomError('');
-    dispatch(loginUser({ email, password }));
+
+    if (!isValidEmail(email)) {
+      setCustomError('Пожалуйста, введите корректный email');
+      setShowError(true);
+      return;
+    }
+
+    if (password.length < 8) {
+      setCustomError('Пароль должен содержать минимум 8 символов');
+      setShowError(true);
+      return;
+    }
+
+    try {
+      await dispatch(loginUser({ email, password })).unwrap();
+    } catch (error) {
+      setShowError(true);
+    }
   };
 
   return (

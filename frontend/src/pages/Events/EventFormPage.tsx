@@ -4,6 +4,8 @@ import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { RootState } from '../../app/store';
 import { createEventThunk, updateEventThunk, fetchEvents, fetchUserEvents } from '../../features/events/eventsThunks';
 import EventForm, { EventFormValues } from '../../components/EventForm/EventForm';
+import ErrorNotification from '../../components/ErrorNotification';
+import styles from './EventFormPage.module.scss';
 
 const EventFormPage = () => {
   const { id } = useParams();
@@ -13,6 +15,7 @@ const EventFormPage = () => {
   const { events, isLoading } = useAppSelector((state: RootState) => state.events);
   const { user, isAuthenticated } = useAppSelector((state: RootState) => state.auth);
   const [error, setError] = useState<string | null>(null);
+  const [showError, setShowError] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -31,19 +34,17 @@ const EventFormPage = () => {
 
   useEffect(() => {
     if (id && !eventToEdit && events.length > 0) {
-      // Если не найдено событие для редактирования
       navigate('/events');
     }
   }, [id, eventToEdit, events.length, navigate]);
 
   const handleSubmit = async (data: EventFormValues) => {
     setError(null);
+    setShowError(false);
     try {
       if (!user) throw new Error('Не авторизован');
       
-      // Проверяем права на редактирование
       if (id && eventToEdit) {
-        console.log('Editing event:', { id, eventToEdit, user });
         const eventCreatorId = Number(eventToEdit.created_by);
         const currentUserId = Number(user.id);
         if (eventCreatorId !== currentUserId && user.role !== 'admin') {
@@ -51,7 +52,6 @@ const EventFormPage = () => {
         }
       }
 
-      // Преобразуем локальную дату в UTC
       const localDate = new Date(data.date);
       const utcDate = new Date(Date.UTC(
         localDate.getFullYear(),
@@ -61,29 +61,20 @@ const EventFormPage = () => {
         localDate.getMinutes()
       ));
 
-      console.log('Submitting event data:', { ...data, date: utcDate.toISOString() });
-
       if (id) {
-        const result = await dispatch(updateEventThunk({ id, ...data, date: utcDate.toISOString() })).unwrap();
-        console.log('Event updated:', result);
-        
-        // Обновляем списки событий
+        await dispatch(updateEventThunk({ id, ...data, date: utcDate.toISOString() })).unwrap();
         await Promise.all([
           dispatch(fetchEvents()),
           dispatch(fetchUserEvents())
         ]);
       } else {
-        const result = await dispatch(createEventThunk({ ...data, date: utcDate.toISOString(), created_by: Number(user.id) })).unwrap();
-        console.log('Event created:', result);
-        
-        // Обновляем списки событий
+        await dispatch(createEventThunk({ ...data, date: utcDate.toISOString(), created_by: Number(user.id) })).unwrap();
         await Promise.all([
           dispatch(fetchEvents()),
           dispatch(fetchUserEvents())
         ]);
       }
 
-      // Определяем, откуда пришли
       const from = location.state?.from;
       if (from === '/profile') {
         navigate('/profile');
@@ -93,12 +84,20 @@ const EventFormPage = () => {
     } catch (err: any) {
       console.error('Error saving event:', err);
       setError(err?.message || 'Ошибка сохранения');
+      setShowError(true);
     }
   };
 
   return (
-    <div style={{ padding: '32px 0' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: 24 }}>{id ? 'Редактирование' : 'Создание'} мероприятия</h1>
+    <div className={styles.container}>
+      {showError && (
+        <ErrorNotification
+          message={error || 'Неизвестная ошибка'}
+          onClose={() => { setShowError(false); setError(null); }}
+          duration={5000}
+        />
+      )}
+      <h1 className={styles.title}>{id ? 'Редактирование' : 'Создание'} мероприятия</h1>
       <EventForm
         event={eventToEdit}
         onSubmit={handleSubmit}
